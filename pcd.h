@@ -5,7 +5,10 @@
 #include <math.h>
 #include <dirent.h>
 #include <vector>
+#include "kdtree.h"
 #define DEFAULT_FOCAL_LENGTH 1.0f
+
+class KdTree;
 
 class PCD {
 	public:
@@ -59,17 +62,6 @@ class PCD {
 		};
 
 		struct Plane {float a,b,c,d;};
-		struct Cube {float x1,y1,z1,x2,y2,z2;};
-
-		struct KdTreeNode {
-			bool isLeaf;
-			union {
-				int index;
-				float value;
-			};
-			KdTreeNode* left;
-			KdTreeNode* right;
-		};
 
 		float viewpoint[7];
 		Camera camera;
@@ -80,11 +72,7 @@ class PCD {
 		int numPoints;
 		int capacity;
 		PCD_data_storage data_storage;
-		Cube boundingBox;
-		KdTreeNode* kdtreeLeaves;
-		std::vector<KdTreeNode*> kdtreeBranches;
-		KdTreeNode* kdtreeRoot;
-		int kdtreeDepth;
+		KdTree* kdtree;
 
 		PCD(const char* fileName);
 		PCD(int size);
@@ -100,13 +88,6 @@ class PCD {
 		Plane segmentPlane(int iter,float threshold,float inlierRatio);
 		void filterPlane(std::vector<int> *ind,Plane p,float threshold,bool positiveOrNegative);
 		PCD* extractIndices(std::vector<int> *ind);
-
-		Cube getBoundingBox();
-		KdTreeNode* buildKdTreeNode(int* pointList, int n, int depth);
-		void buildKdTree();
-		void searchKdTree(std::vector<int> *indices,float x,float y,float z,float distance);
-		void searchKdTreeNode(KdTreeNode* node,std::vector<int> *indices,Cube* range,Cube cell,int depth);
-		void getIndexFromSubTree(KdTreeNode* node, std::vector<int> *indices);
 		void euclideanCluster(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
 
 		static PCD* LoadFromMatrix(const char* fileName);

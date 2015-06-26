@@ -110,13 +110,14 @@ int main(int argc,char* argv[]) {
 //	p->filterPlane(&ind,coefficients,0.1,false);
 //	q = p->extractIndices(&ind);
 
-//	q = p;
-//	q->buildKdTree();
-//	printf("kdtree depth: %d\n",q->kdtreeDepth);
+	q = p;
+	q->kdtree = new KdTree(q);
+	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 //	std::vector<std::vector<int>> clusters;
 //	q->euclideanCluster(&clusters,0.5,1000,50000,50);
 //	q->writeClustersToPCD(&clusters,"clusters");
-	p->loadDescriptor(argv[3]);
+
+//	p->loadDescriptor(argv[3]);
 
 	if (argc>=3) {
 		int l = strlen(argv[2]);
