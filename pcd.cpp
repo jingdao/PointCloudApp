@@ -566,6 +566,42 @@ float PCD::colormap(float f) {
 	return (float) res;
 }
 
+PCD::Quaternion PCD::quaternionMult(Quaternion qa, Quaternion qb) {
+	Quaternion qc;
+	qc.r = qa.r*qb.r - qa.i*qb.i - qa.j*qb.j - qa.k*qb.k;
+	qc.i = qa.r*qb.i + qa.i*qb.r + qa.j*qb.k - qa.k*qb.j;
+	qc.j = qa.r*qb.j + qa.j*qb.r + qa.k*qb.i - qa.i*qb.k;
+	qc.k = qa.r*qb.k + qa.k*qb.r + qa.i*qb.j - qa.j*qb.i;
+	return qc;
+}
+
+PCD::Quaternion PCD::quaternionInv(Quaternion q) {
+	Quaternion qc;
+	qc.r = q.r;
+	qc.i = -q.i;
+	qc.j = -q.j;
+	qc.k = -q.k;
+	return qc;
+}
+
+void PCD::rotate(Quaternion q) {
+	for (int i=0;i<numPoints;i++) {
+		Quaternion vec = {0, float_data[i*4], float_data[i*4+1], float_data[i*4+2]};
+		vec = quaternionMult(quaternionMult(q, vec), quaternionInv(q));
+		float_data[i * 4] = vec.i;
+		float_data[i * 4 + 1] = vec.j;
+		float_data[i * 4 + 2] = vec.k;
+	}
+}
+
+void PCD::translate(float x, float y, float z) {
+	for (int i=0;i<numPoints;i++) {
+		float_data[i * 4] += x;
+		float_data[i * 4 + 1] += y;
+		float_data[i * 4 + 2] += z;
+	}
+}
+
 PCD::Plane PCD::segmentPlane(int iter,float threshold,float inlierRatio) {
 	Plane bestPlane = {0,0,0,0};
 	int maxInliers = 0;

@@ -1,5 +1,6 @@
 #include "pcd.h"
 #include "lapack.h"
+#include "descriptor.h"
 #include <string>
 
 void eigenvalue(int N,double* A,double* lambda_real,double* lambda_imag,double* v) {
@@ -99,20 +100,24 @@ int main(int argc,char* argv[]) {
 	const char* f = file.c_str();
 	if (argc>=2)
 		f = argv[1];
+
 	PCD* p = new PCD(f),*q;
 	printf("Loaded %s (%s, %d points)\n",f,
 		p->data_storage==PCD::ASCII ? "ascii" : "binary",
 		p->numPoints);
-	
+
+//	Descriptor* d = new Descriptor(f);
+//	printf("Loaded %s (%d points)\n",f, d->numPoints);
+
 //	PCD::Plane  coefficients = p->segmentPlane(10000,0.1,0.4);
 //	printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
 //	std::vector<int> ind;
 //	p->filterPlane(&ind,coefficients,0.1,false);
 //	q = p->extractIndices(&ind);
 
-	q = p;
-	q->kdtree = new KdTree(q);
-	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
+//	q = p;
+//	q->kdtree = new KdTree(q);
+//	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 //	std::vector<std::vector<int>> clusters;
 //	q->euclideanCluster(&clusters,0.1,200,50000,100);
 //	q->writeClustersToPCD(&clusters,"clusters2");
@@ -129,4 +134,5 @@ int main(int argc,char* argv[]) {
 
 	delete p;
 //	delete q;
+//	delete d;
 }
