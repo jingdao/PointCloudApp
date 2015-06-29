@@ -646,7 +646,6 @@ PCD* PCD::extractIndices(std::vector<int> *ind) {
 	return p;
 }
 
-
 void PCD::euclideanCluster(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
 	if (!kdtree) kdtree = new KdTree(this);
 	bool* visited = new bool[numPoints]();

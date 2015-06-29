@@ -31,6 +31,7 @@ class KdTree {
 		KdTree(PCD* pointcloud);
 		~KdTree();
 		KdTreeNode* buildKdTreeNode(int* pointList, int n, int depth);
+		void findMedian(int* pointList, int n, int target, int dimension);
 		void search(std::vector<int> *indices,float x,float y,float z,float distance);
 		void searchNode(KdTreeNode* node,std::vector<int> *indices,Cube* range,Cube cell,int depth);
 		void getIndexFromSubTree(KdTreeNode* node, std::vector<int> *indices);

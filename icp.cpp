@@ -114,8 +114,8 @@ int main(int argc,char* argv[]) {
 	q->kdtree = new KdTree(q);
 	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 //	std::vector<std::vector<int>> clusters;
-//	q->euclideanCluster(&clusters,0.5,1000,50000,50);
-//	q->writeClustersToPCD(&clusters,"clusters");
+//	q->euclideanCluster(&clusters,0.1,200,50000,100);
+//	q->writeClustersToPCD(&clusters,"clusters2");
 
 //	p->loadDescriptor(argv[3]);
 

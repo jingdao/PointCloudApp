@@ -1,7 +1,7 @@
 #include "kdtree.h"
 
 KdTree::KdTree(PCD* pointcloud) {
-	if (pointcloud->numPoints == 0)
+	if (!pointcloud || pointcloud->numPoints == 0)
 		return;
 	kdtreeLeaves = (KdTreeNode*) calloc(pointcloud->numPoints, sizeof(KdTreeNode));
 	int* pointList = (int*) malloc(pointcloud->numPoints * sizeof(int));
@@ -31,15 +31,8 @@ KdTree::KdTreeNode* KdTree::buildKdTreeNode(int* pointList, int n, int depth) {
 	int dimension = depth % 3;
 
 	//find median element
-	int i1 = rand() % n, i2 = rand() % n, i3 = rand() % n;
-	int medianIndex;
-	float f1 = float_data[pointList[i1] * 4 + dimension];
-	float f2 = float_data[pointList[i2] * 4 + dimension];
-	float f3 = float_data[pointList[i3] * 4 + dimension];
-	if (f1 >= f2 && f1 <= f3) medianIndex = i1;
-	else if (f2 >= f1 && f2 <= f3) medianIndex = i2;
-	else medianIndex = i3;
-//	int medianIndex = rand() % n;
+	findMedian(pointList,n,n/2,dimension); //partitions around median
+	int medianIndex = n / 2;
 	int median = pointList[medianIndex];
 	float medianValue = float_data[median * 4 + dimension];
 	KdTreeNode* currentNode = (KdTreeNode*) calloc(1,sizeof(KdTreeNode));
@@ -47,28 +40,8 @@ KdTree::KdTreeNode* KdTree::buildKdTreeNode(int* pointList, int n, int depth) {
 	kdtreeBranches.push_back(currentNode);
 
 	//partition around median
-	int leftSize, *leftPoints = pointList;
-	int rightSize, *rightPoints;
-	int tmp;
-	pointList[medianIndex] = pointList[n-1];
-	int i=-1,j=-1;
-	do {
-		j++;
-		if (float_data[pointList[j] * 4 + dimension] <= medianValue) {
-			i++;
-			tmp = pointList[i];
-			pointList[i] = pointList[j];
-			pointList[j] = tmp;
-		}
-	} while (j < n - 2);
-	pointList[n-1] = pointList[i+1];
-	pointList[i+1] = median;
-	if (i + 1 == n - 1) //median is last element
-		leftSize = i + 1;
-	else 
-		leftSize = i + 2;
-	rightSize = n - leftSize;
-	rightPoints = pointList + leftSize;
+	int leftSize = medianIndex, *leftPoints = pointList;
+	int rightSize = n - leftSize, *rightPoints = pointList + leftSize;
 //	printf("n %d i,j %d %d left %d right %d median %d\n",n,i,j,leftSize,rightSize,medianIndex);
 
 	//get left and right children
@@ -79,6 +52,31 @@ KdTree::KdTreeNode* KdTree::buildKdTreeNode(int* pointList, int n, int depth) {
 
 //	printf("depth %d left %d right %d median %d %f\n",depth,leftSize,rightSize,medianIndex,medianValue);
 	return currentNode;
+}
+
+void KdTree::findMedian(int* pointList, int n, int target, int dimension) {
+	if (n < 2) return;
+	int pivot_index = rand() % n;
+	int pivot = pointList[pivot_index];
+	float pivotValue = float_data[pivot * 4 + dimension];
+	pointList[pivot_index] = pointList[n-1];
+	int i=-1,j=-1,tmp;
+	do {
+		j++;
+		if (float_data[pointList[j] * 4 + dimension] < pivotValue || 
+			(float_data[pointList[j] * 4 + dimension] == pivotValue && rand()%2 == 0)) {
+			i++;
+			tmp = pointList[i];
+			pointList[i] = pointList[j];
+			pointList[j] = tmp;
+		}
+	} while (j < n - 2);
+	i++;
+	pointList[n-1] = pointList[i];
+	pointList[i] = pivot;
+	if (i == target) return;
+	else if (i > target) findMedian(pointList, i , target, dimension);
+	else findMedian(pointList + i + 1, n - i - 1, target - i - 1, dimension);
 }
 
 void KdTree::search(std::vector<int> *indices,float x,float y,float z,float distance) {
@@ -129,11 +127,6 @@ void KdTree::searchNode(KdTreeNode* node,std::vector<int> *indices,Cube* range,C
 			searchNode(node->left,indices,range,leftCell,depth+1);
 			searchNode(node->right,indices,range,rightCell,depth+1);
 		}
-//		else {
-//			printf("rejected\n");
-//			printf("cell: %f %f %f %f %f %f\n",cell.x1,cell.y1,cell.z1,cell.x2,cell.y2,cell.z2);
-//			printf("range: %f %f %f %f %f %f\n",range->x1,range->y1,range->z1,range->x2,range->y2,range->z2);
-//		}
 	}
 }
 
