@@ -1,37 +1,7 @@
 #include "pcd.h"
-#include "lapack.h"
 #include "descriptor.h"
+#include "normal.h"
 #include <string>
-
-void eigenvalue(int N,double* A,double* lambda_real,double* lambda_imag,double* v) {
-
-	int info,ldvl=1,ldvr=N,lwork=15*N;	
-	double *work = new double[lwork]();
-	char jobvl = 'N', jobvr = 'V';
-	dgeev_(&jobvl,&jobvr, &N, A, &N, lambda_real, lambda_imag,
-	    NULL,&ldvl, v, &ldvr ,work, &lwork, &info);
-//	printf("info: %d\n",info);
-//	printf("optimal: %f\n",work[0]);
-	if (info!=0) {
-		printf("Error in subroutine dgeev_ (info=%d)\n",info);
-	}
-	delete[] work;
-}
-
-void svd(int M,int N,double* A,double *U, double* S, double* VT) {
-
-	int info, lwork=5*(M>N?N:M);
-	double* work = new double[lwork];
-	char jobu = 'A', jobvt = 'A';
-	dgesvd_(&jobu, &jobvt, &M, &N, A, &M, 
-	     S, U, &M, VT, &N, work, &lwork, &info);
-//	printf("info: %d\n",info);
-//	printf("optimal: %f\n",work[0]);
-	if (info!=0) {
-		printf("Error in subroutine dgesvd_ (info=%d)\n",info);
-	}
-	delete[] work;
-}
 
 void testEigenvalue() {
 	int n=4;
@@ -42,7 +12,7 @@ void testEigenvalue() {
 	double lambda_real[n] = {};
 	double lambda_imag[n] = {};
 	double v[n*n] = {};
-	eigenvalue(n,A,lambda_real,lambda_imag,v);
+	Normal::eigenvalue(n,A,lambda_real,lambda_imag,v);
 	printf("lambda: ");
 	for (int i=0;i<n;i++)
 		printf("%f+%fi ",lambda_real[i],lambda_imag[i]);
@@ -71,7 +41,7 @@ void testSVD() {
 	double U[m*m] = {};
 	double S[l] = {};
 	double VT[n*n] = {};
-	svd(m,n,A,U,S,VT);
+	Normal::svd(m,n,A,U,S,VT);
 	printf("S: ");
 	for (int i=0;i<l;i++)
 		printf("%f ",S[i]);
@@ -101,13 +71,21 @@ int main(int argc,char* argv[]) {
 	if (argc>=2)
 		f = argv[1];
 
-	PCD* p = new PCD(f),*q;
-	printf("Loaded %s (%s, %d points)\n",f,
-		p->data_storage==PCD::ASCII ? "ascii" : "binary",
-		p->numPoints);
+//	PCD* p = new PCD(f),*q;
+//	printf("Loaded %s (%s, %d points)\n",f,
+//		p->data_storage==PCD::ASCII ? "ascii" : "binary",
+//		p->numPoints);
 
-//	Descriptor* d = new Descriptor(f);
+	Descriptor* d = new Descriptor(argv[2]);
 //	printf("Loaded %s (%d points)\n",f, d->numPoints);
+	std::vector<std::vector<int>> clusters;
+	d->kMeansClustering(&clusters);
+	for (size_t i=0;i<clusters.size();i++) {
+		for (size_t j=0;j<clusters[i].size();j++) {
+			printf("%d.pcd ",clusters[i][j]);
+		}
+		printf("\n");
+	}
 
 //	PCD::Plane  coefficients = p->segmentPlane(10000,0.1,0.4);
 //	printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
@@ -119,20 +97,20 @@ int main(int argc,char* argv[]) {
 //	q->kdtree = new KdTree(q);
 //	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 //	std::vector<std::vector<int>> clusters;
-//	q->euclideanCluster(&clusters,0.1,200,50000,100);
+//	q->euclideanClustering(&clusters,0.1,200,50000,100);
 //	q->writeClustersToPCD(&clusters,"clusters2");
 
 //	p->loadDescriptor(argv[3]);
 
-	if (argc>=3) {
-		int l = strlen(argv[2]);
-		if (strncmp(argv[2] + l - 4,".pcd",4) == 0)
-			p->writeToPCD(argv[2]);
-		else if (strncmp(argv[2] + l - 4,".ply",4) == 0)
-			p->writeToPLY(argv[2]);
-	}
+//	if (argc>=3) {
+//		int l = strlen(argv[2]);
+//		if (strncmp(argv[2] + l - 4,".pcd",4) == 0)
+//			p->writeToPCD(argv[2]);
+//		else if (strncmp(argv[2] + l - 4,".ply",4) == 0)
+//			p->writeToPLY(argv[2]);
+//	}
 
-	delete p;
+//	delete p;
 //	delete q;
-//	delete d;
+	delete d;
 }

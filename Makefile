@@ -25,8 +25,8 @@ hall_segment: hall_segment.cpp
 correspondence_grouping: correspondence_grouping.cpp
 	$(CXX) $(INC) -I/usr/local/include/vtk-6.2/ $(LIB_DIRS) -o $@ $< $(LDFLAGS2)
 	
-icp: icp.o pcd.o pcd.h kdtree.o kdtree.h descriptor.h descriptor.o
-	$(CXX) -o $@ icp.o pcd.o kdtree.o descriptor.o -llapack
+icp: icp.o pcd.o pcd.h kdtree.o kdtree.h descriptor.h descriptor.o normal.h normal.o
+	$(CXX) -o $@ icp.o pcd.o kdtree.o descriptor.o normal.o -llapack
 
 fpf2jpg: fpf2jpg.cpp
 	$(CXX) -o $@ $< -ljpeg

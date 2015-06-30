@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,10 +97,11 @@ class PCD {
 		Quaternion quaternionInv(Quaternion q);
 		void rotate(Quaternion q);
 		void translate(float x, float y, float z);
+		Quaternion getCentroid(std::vector<int> *indices);
 
 		Plane segmentPlane(int iter,float threshold,float inlierRatio);
 		void filterPlane(std::vector<int> *ind,Plane p,float threshold,bool positiveOrNegative);
 		PCD* extractIndices(std::vector<int> *ind);
-		void euclideanCluster(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
+		void euclideanClustering(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
 
 };

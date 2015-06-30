@@ -602,6 +602,26 @@ void PCD::translate(float x, float y, float z) {
 	}
 }
 
+//indices: subcloud under consideration, complete cloud if null
+PCD::Quaternion PCD::getCentroid(std::vector<int> *indices) {
+	float sumX=0, sumY=0, sumZ=0;
+	if (indices) {
+		for (size_t i=0;i<indices->size();i++) {
+			sumX += float_data[(*indices)[i] * 4];
+			sumY += float_data[(*indices)[i] * 4 + 1];
+			sumZ += float_data[(*indices)[i] * 4 + 2];
+		}
+	} else {
+		for (int i=0;i<numPoints;i++) {
+			sumX += float_data[i * 4];
+			sumY += float_data[i * 4 + 1];
+			sumZ += float_data[i * 4 + 2];
+		}
+	}
+	Quaternion q = {0, sumX / numPoints, sumY / numPoints, sumZ / numPoints};
+	return q;
+}
+
 PCD::Plane PCD::segmentPlane(int iter,float threshold,float inlierRatio) {
 	Plane bestPlane = {0,0,0,0};
 	int maxInliers = 0;
@@ -682,7 +702,7 @@ PCD* PCD::extractIndices(std::vector<int> *ind) {
 	return p;
 }
 
-void PCD::euclideanCluster(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
+void PCD::euclideanClustering(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
 	if (!kdtree) kdtree = new KdTree(this);
 	bool* visited = new bool[numPoints]();
 	for (int i=0;i<numPoints;i++) {
