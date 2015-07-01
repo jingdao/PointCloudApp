@@ -71,46 +71,46 @@ int main(int argc,char* argv[]) {
 	if (argc>=2)
 		f = argv[1];
 
-//	PCD* p = new PCD(f),*q;
-//	printf("Loaded %s (%s, %d points)\n",f,
-//		p->data_storage==PCD::ASCII ? "ascii" : "binary",
-//		p->numPoints);
+	PCD* p = new PCD(f),*q;
+//	PCD* p = PCD::LoadFromKITTI(f,NULL),*q;
+	printf("Loaded %s (%s, %d points)\n",f,
+		p->data_storage==PCD::ASCII ? "ascii" : "binary",
+		p->numPoints);
 
-	Descriptor* d = new Descriptor(argv[2]);
+//	Descriptor* d = new Descriptor(argv[2]);
 //	printf("Loaded %s (%d points)\n",f, d->numPoints);
-	std::vector<std::vector<int>> clusters;
-	d->kMeansClustering(&clusters);
-	for (size_t i=0;i<clusters.size();i++) {
-		for (size_t j=0;j<clusters[i].size();j++) {
-			printf("%d.pcd ",clusters[i][j]);
-		}
-		printf("\n");
-	}
-
-//	PCD::Plane  coefficients = p->segmentPlane(10000,0.1,0.4);
-//	printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
-//	std::vector<int> ind;
-//	p->filterPlane(&ind,coefficients,0.1,false);
-//	q = p->extractIndices(&ind);
-
-//	q = p;
-//	q->kdtree = new KdTree(q);
-//	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 //	std::vector<std::vector<int>> clusters;
-//	q->euclideanClustering(&clusters,0.1,200,50000,100);
-//	q->writeClustersToPCD(&clusters,"clusters2");
+//	d->kMeansClustering(&clusters);
+//	for (size_t i=0;i<clusters.size();i++) {
+//		for (size_t j=0;j<clusters[i].size();j++) {
+//			printf("%d.pcd ",clusters[i][j]);
+//		}
+//		printf("\n");
+//	}
+
+	PCD::Plane  coefficients = p->segmentPlane(10000,0.1,0.4);
+	printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
+	std::vector<int> ind;
+	p->filterPlane(&ind,coefficients,0.1,false);
+	q = p->extractIndices(&ind);
+
+	q->kdtree = new KdTree(q);
+	printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
+	std::vector<std::vector<int>> clusters;
+	q->euclideanClustering(&clusters,0.1,100,50000,100);
+	q->writeClustersToPCD(&clusters,argv[2]);
 
 //	p->loadDescriptor(argv[3]);
 
-//	if (argc>=3) {
-//		int l = strlen(argv[2]);
-//		if (strncmp(argv[2] + l - 4,".pcd",4) == 0)
-//			p->writeToPCD(argv[2]);
-//		else if (strncmp(argv[2] + l - 4,".ply",4) == 0)
-//			p->writeToPLY(argv[2]);
-//	}
+	if (argc>=3) {
+		int l = strlen(argv[2]);
+		if (strncmp(argv[2] + l - 4,".pcd",4) == 0)
+			p->writeToPCD(argv[2]);
+		else if (strncmp(argv[2] + l - 4,".ply",4) == 0)
+			p->writeToPLY(argv[2]);
+	}
 
-//	delete p;
-//	delete q;
-	delete d;
+	delete p;
+	delete q;
+//	delete d;
 }

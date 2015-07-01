@@ -1,5 +1,47 @@
 #include "pcd.h"
 
+//http://www.rcn.montana.edu/Resources/Converter.aspx
+void wgs2utm(double lat, double lon, double *easting, double *northing) {
+	double a = 6378137;
+	double f = 1 / 298.257223563;
+	double k0 = 0.9996;
+	double b = a * (1 - f);
+	double e = sqrt(1 - b * b / a / a);
+	double phi = lat / 180 * M_PI;
+
+	double utmz = 1 + floor((lon + 180) / 6);            // longitude to utm zone
+	double zcm = 3 + 6 * (utmz - 1) - 180;                     // central meridian of a zone
+	double esq = (1 - (b / a) * (b / a));
+	double e0sq = e * e / (1 - pow(e, 2));
+	double M = 0;
+
+	double N = a / sqrt(1 - pow(e * sin(phi), 2));
+	double T = pow(tan(phi), 2);
+	double C = e0sq * pow(cos(phi), 2);
+	double A = (lon - zcm) * M_PI / 180 * cos(phi);
+
+	// calculate M (USGS style)
+	M = phi * (1 - esq * (1.0 / 4 + esq * (3.0 / 64 + 5 * esq / 256)));
+	M = M - sin(2 * phi) * (esq * (3.0 / 8 + esq * (3.0 / 32 + 45 * esq / 1024)));
+	M = M + sin(4 * phi) * (esq * esq * (15.0 / 256 + esq * 45.0 / 1024));
+	M = M - sin(6 * phi) * (esq * esq * esq * (35.0 / 3072));
+	M = M * a;                                      //Arc length along standard meridian
+	double M0 = 0;                                         // if another point of origin is used than the equator
+
+	// now we are ready to calculate the UTM values...
+	// first the easting
+	double x = k0 * N * A * (1 + A * A * ((1 - T + C) / 6 + A * A * (5 - 18 * T + T * T + 72 * C - 58 * e0sq) / 120)); //Easting relative to CM
+	x = x + 500000; // standard easting
+	// now the northing
+	double y = k0 * (M - M0 + N * tan(phi) * (A * A * (1.0 / 2 + A * A * ((5 - T + 9 * C + 4 * C * C) / 24 + A * A * (61 - 58 * T + T * T + 600 * C - 330 * e0sq) / 720))));    // first from the equator
+	if (y < 0) {
+		y = 10000000 + y;   // add in false northing if south of the equator
+	}
+
+	*easting = x;
+	*northing = y;
+}
+
 PCD::PCD(const char* fileName) {
 	numFields = 4;
 	data = NULL;
@@ -411,7 +453,7 @@ PCD* PCD::LoadFromBundler(const char* fileName) {
 	return pointcloud;
 }
 
-PCD* PCD::LoadFromKITTI(const char* fileName) {
+PCD* PCD::LoadFromKITTI(const char* fileName, const char* oxts) {
 	FILE* f = fopen(fileName,"r");
 	if (!f) {
 		printf("File not found: %s\n", fileName);
@@ -428,12 +470,33 @@ PCD* PCD::LoadFromKITTI(const char* fileName) {
 	
 	//map reflectance to color
 	for (int i=0;i<size;i++) {
-		p->float_data[i * 4 + 3] = colormap(p->float_data[i * 4 + 3]);
-//		p->float_data[i * 4 + 3] = 255 << 16;
+//		p->float_data[i * 4 + 3] = colormap(p->float_data[i * 4 + 3]);
+		p->float_data[i * 4 + 3] = 255 << 16;
 //		p->float_data[i * 4 + 3] = (int) (255 * p->float_data[i * 4 + 3]) << 16;
 	}
-
 	fclose (f);
+	if (!oxts) return p;
+
+	f = fopen(oxts,"r");
+	if (!f) {
+		printf("File not found: %s\n", fileName);
+		return p;
+	}
+	char buf[512];
+	fgets(buf,512,f);
+	char* c = buf;
+
+	double latitude = strtod(c,&c);
+	double longitude = strtod(c,&c);
+	double altitude = strtod(c,&c);
+	double roll = strtod(c,&c);
+	double pitch = strtod(c,&c);
+	double yaw = strtod(c,&c);
+	double E=0,N=0;
+	wgs2utm(latitude,longitude,&E,&N);
+	p->translate(E - 457840.938302, N - 5428721.722951, altitude - 113.966202);
+
+	fclose(f);
 	return p;
 }
 

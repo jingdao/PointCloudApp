@@ -88,7 +88,7 @@ class PCD {
 
 		static PCD* LoadFromMatrix(const char* fileName);
 		static PCD* LoadFromBundler(const char* fileName);
-		static PCD* LoadFromKITTI(const char* fileName);
+		static PCD* LoadFromKITTI(const char* fileName, const char* oxts);
 		static PCD* LoadFromCameraParameter(const char* dir);
 		static PCD* LoadFromPTS(const char* fileName);
 		static float colormap(float f);
