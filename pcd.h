@@ -85,23 +85,29 @@ class PCD {
 		void writeToPCD(const char* filename);
 		void writeToPLY(const char* filename);
 		void writeClustersToPCD(std::vector<std::vector<int>> *indices,const char* dir);
+		void writeToOFF(const char* filename);
 
+		static PCD* LoadFromPLY(const char* fileName);
 		static PCD* LoadFromMatrix(const char* fileName);
 		static PCD* LoadFromBundler(const char* fileName);
 		static PCD* LoadFromKITTI(const char* fileName, const char* oxts);
 		static PCD* LoadFromCameraParameter(const char* dir);
 		static PCD* LoadFromPTS(const char* fileName);
+		static PCD* LoadFromCluster(const char* dir);
 		static float colormap(float f);
 
+		Quaternion quaternionFromAngle(float rx,float ry, float rz);
 		Quaternion quaternionMult(Quaternion qa, Quaternion qb);
 		Quaternion quaternionInv(Quaternion q);
 		void rotate(Quaternion q);
 		void translate(float x, float y, float z);
 		Quaternion getCentroid(std::vector<int> *indices);
+		int get3DProjection(unsigned int* pixels,int screenWidth, int screenHeight, int pointSize, bool zoomToFit);
 
 		Plane segmentPlane(int iter,float threshold,float inlierRatio);
 		void filterPlane(std::vector<int> *ind,Plane p,float threshold,bool positiveOrNegative);
 		PCD* extractIndices(std::vector<int> *ind);
 		void euclideanClustering(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
+		void euclideanClustering2(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
 
 };

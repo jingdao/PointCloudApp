@@ -100,6 +100,7 @@ PCD::PCD(int size) {
 	capacity = size;
 	data_storage = ASCII;
 	kdtree = NULL;
+	camera = { {0,0,0,0}, {1,0,0,0}, 1};
 }
 
 PCD::~PCD() {
@@ -275,12 +276,75 @@ void PCD::writeToPLY(const char* filename) {
 void PCD::writeClustersToPCD(std::vector<std::vector<int>> *indices,const char* dir) {
 	char buffer[256];
 	for (size_t i=0;i<indices->size();i++) {
-		snprintf(buffer,256,"%s/%lu.pcd",dir,i);
+		snprintf(buffer,256,"%s/%lu-cloud.pcd",dir,i);
 		std::vector<int> currentIndices = (*indices)[i];
 		PCD* subcloud = extractIndices(&currentIndices);
 		subcloud->writeToPCD(buffer);
 		delete subcloud;
 	}
+}
+
+void PCD::writeToOFF(const char* filename) {
+	if (!filename)
+		return;
+	FILE* f = fopen(filename, "w");
+	if (!f) {
+		printf("Cannot write to file: %s\n", filename);
+		return;
+	}
+
+	if (!kdtree) kdtree = new KdTree(this);
+	KdTree::Cube bb = kdtree->getBoundingBox();
+	fprintf(f,"OFF\n8 6 12\n");
+	fprintf(f,"%f %f %f\n",bb.x1,bb.y1,bb.z1);
+	fprintf(f,"%f %f %f\n",bb.x2,bb.y1,bb.z1);
+	fprintf(f,"%f %f %f\n",bb.x1,bb.y2,bb.z1);
+	fprintf(f,"%f %f %f\n",bb.x2,bb.y2,bb.z1);
+	fprintf(f,"%f %f %f\n",bb.x1,bb.y1,bb.z2);
+	fprintf(f,"%f %f %f\n",bb.x2,bb.y1,bb.z2);
+	fprintf(f,"%f %f %f\n",bb.x1,bb.y2,bb.z2);
+	fprintf(f,"%f %f %f\n",bb.x2,bb.y2,bb.z2);
+	fprintf(f,"4 0 1 3 2 1 0 0 0\n"
+	"4 0 4 5 1 1 0 0 0\n"
+	"4 0 2 6 4 1 0 0 0\n"
+	"4 1 3 7 5 1 0 0 0\n"
+	"4 2 6 7 3 1 0 0 0\n"
+	"4 4 5 7 6 1 0 0 0\n");
+	fclose(f);
+}
+
+PCD* PCD::LoadFromPLY(const char* fileName) {
+	FILE* f = fopen(fileName, "r");
+	if (!f) {
+		printf("File not found: %s\n", fileName);
+		return NULL;
+	}
+	char buf[256];
+	int n;
+	PCD* pcd;
+	int r,g,b,rgb;
+	while (fgets(buf, 256, f)) {
+		if (sscanf(buf,"element vertex %d",&n)==1) {
+			pcd = new PCD(n);
+		} else if (strncmp(buf,"end_header",10)==0) {
+			for (int i=0;i<n;i++) {
+				fgets(buf,256,f);
+				if (sscanf(buf, "%f %f %f %d %d %d", pcd->float_data + i * 4, pcd->float_data + i * 4 + 1,
+					pcd->float_data + i * 4 + 2, &r, &g, &b) == 6) {
+					rgb = (r<<16) | (g<<8) | b;
+					pcd->float_data[i * 4 + 3] = (float) rgb;
+				} else {
+					printf("Error parsing %s\n",fileName);
+					printf("Line %d: %s\n",i,buf);
+					break;
+				}
+			}
+			break;
+		}
+	}
+	fclose(f);
+	return pcd;
+
 }
 
 PCD* PCD::LoadFromMatrix(const char* fileName) {
@@ -585,7 +649,7 @@ PCD* PCD::LoadFromPTS(const char* fileName) {
 	int r,g,b,d,rgb;
 	while (fgets(buf, 256, f)) {
 		int n = atoi(buf);
-		printf("n = %d\n",n);
+//		printf("n = %d\n",n);
 		if (!pcd->expand(n + pointsParsed))
 			break;
 		for (int i=0;i<n;i++) {
@@ -604,6 +668,41 @@ PCD* PCD::LoadFromPTS(const char* fileName) {
 	}
 	fclose(f);
 	return pcd;
+}
+
+PCD* PCD::LoadFromCluster(const char* dir) {
+	char buffer[1024];
+	int ndir = strlen(dir);
+	strncpy(buffer,dir,ndir);
+	char* buffer_c = buffer + ndir;
+	*buffer_c++ = '/';
+
+	strcpy(buffer_c,"prediction.txt");
+	FILE* labelFile = fopen(buffer,"r");
+	std::vector<int> labels;
+	char line[64];
+	while (fgets(line,64,labelFile)) {
+		labels.push_back(atoi(line));
+	}
+	fclose(labelFile);
+
+	PCD* combined = new PCD(0);
+	float colorChoice[] = {16777215, 255<<16, 255<<8, 255};
+	for (size_t i=0;i<labels.size();i++) {
+		snprintf(buffer_c,64,"%lu-cloud.pcd",i);
+		PCD* cloud = new PCD(buffer);
+		int offset = combined->numPoints;
+		combined->expand(offset + cloud->numPoints);
+		for (int j = 0;j<cloud->numPoints;j++) {
+			combined->float_data[(offset+j) * 4] = cloud->float_data[j * 4];
+			combined->float_data[(offset+j) * 4 + 1] = cloud->float_data[j * 4 + 1];
+			combined->float_data[(offset+j) * 4 + 2] = cloud->float_data[j * 4 + 2];
+			combined->float_data[(offset+j) * 4 + 3] = colorChoice[labels[i]];
+		}
+		delete cloud;
+	}
+
+	return combined;
 }
 
 float PCD::colormap(float f) {
@@ -627,6 +726,53 @@ float PCD::colormap(float f) {
 	}
 	int res = (r<<16)|(g<<8)|b;
 	return (float) res;
+}
+
+PCD::Quaternion PCD::quaternionFromAngle(float rx,float ry, float rz) {
+	float r,i,j,k;
+	float r1 = rz * M_PI / 180;
+	float r2 = ry * M_PI / 180;
+	float r3 = rx * M_PI / 180;
+	float M[9];
+	M[0] = cos(r2)*cos(r3);
+	M[1] = -cos(r2) * sin(r3);
+	M[2] = sin(r2);
+	M[3] = cos(r1) * sin(r3) + cos(r3) * sin(r1) * sin(r2);
+	M[4] = cos(r1) * cos(r3) - sin(r1) * sin(r2) * sin(r3);
+	M[5] = -cos(r2) * sin(r1);
+	M[6] = sin(r1) * sin(r3) - cos(r1) * cos(r3) * sin(r2);
+	M[7] = cos(r3) * sin(r1) + cos(r1) * sin(r2) * sin(r3);
+	M[8] = cos(r1) * cos(r2);
+
+	double tr = M[0] + M[4] + M[8];
+
+	if (tr > 0) { 
+		float S = sqrt(tr+1.0) * 2;
+		r = (float)(0.25 * S);
+		i = (float)((M[7] - M[5]) / S);
+		j = (float)((M[2] - M[6]) / S);
+		k = (float)((M[3] - M[1]) / S);
+	} else if ((M[0] > M[4])&&(M[0]> M[8])) {
+		float S = sqrt(1.0 + M[0]- M[4] - M[8]) * 2;
+		i = (float)(0.25 * S);
+		r = (float)((M[7] - M[5]) / S);
+		k = (float)((M[2] + M[6]) / S);
+		j = (float)((M[3] + M[1]) / S);
+	} else if (M[4]>M[8]) {
+		float S = sqrt(1.0 - M[0] + M[4] - M[8]) * 2; 
+		j = (float)(0.25 * S);
+		k = (float)((M[7] + M[5]) / S);
+		r = (float)((M[2] - M[6]) / S);
+		i = (float)((M[3] + M[1]) / S); 
+	} else {
+		float S = sqrt(1.0 - M[0] - M[4] + M[8]) * 2; 
+		k = (float)(0.25 * S);
+		j = (float)((M[7] + M[5]) / S);
+		i = (float)((M[2] + M[6]) / S);
+		r = (float)((M[3] - M[1]) / S); 
+	}
+	Quaternion res = {r,i,j,k};
+	return res;
 }
 
 PCD::Quaternion PCD::quaternionMult(Quaternion qa, Quaternion qb) {
@@ -683,6 +829,69 @@ PCD::Quaternion PCD::getCentroid(std::vector<int> *indices) {
 	}
 	Quaternion q = {0, sumX / numPoints, sumY / numPoints, sumZ / numPoints};
 	return q;
+}
+
+int PCD::get3DProjection(unsigned int* pixels, int screenWidth, int screenHeight, int pointSize, bool zoomToFit) {
+	int i, j, k;
+	Quaternion q, newPoint;
+	std::vector<float> x_data;
+	std::vector<float> y_data;
+	std::vector<unsigned int> rgb_data;
+	q.r = 0;
+	printf("Using camera: (%f %f %f %f %f %f %f)\n", camera.position.i, camera.position.j, camera.position.k,
+		camera.rotation.r, camera.rotation.i, camera.rotation.j, camera.rotation.k);
+	for (i = 0; i < numPoints; i++) {
+		//first transform point cloud to camera coordinates
+		q.i = float_data[i * 4] - camera.position.i;
+		q.j = float_data[i * 4 + 1] - camera.position.j;
+		q.k = float_data[i * 4 + 2] - camera.position.k;
+		newPoint = quaternionMult(quaternionMult(camera.rotation, q), quaternionInv(camera.rotation));
+		//next map points to image plane based on camera focal length
+		if ( - newPoint.k > camera.focal_length) { //if not behind camera
+			x_data.push_back(newPoint.i * camera.focal_length / - newPoint.k);
+			y_data.push_back(newPoint.j * camera.focal_length / - newPoint.k);
+			rgb_data.push_back((unsigned int) float_data[i * 4 + 3]);
+		}
+	}
+	//lastly plot these points on xy plane of bitmap
+	int pixelsDrawn = 0;
+	float maxX = -1;
+	float maxY = -1;
+	float x, y, scaleX, scaleY;
+	float margin = 0.05f;
+	if (zoomToFit){
+		for (size_t n = 0; n < x_data.size(); n++) {
+			if (fabs(x_data[n]) > maxX) maxX = fabs(x_data[n]);
+			if (fabs(y_data[n]) > maxY) maxY = fabs(y_data[n]);
+		}
+	} else {
+		maxX = 1;
+		maxY = 1;
+	}
+//	printf("display rectangle: %f x %f\n", maxX, maxY);
+	if (maxX > maxY) {
+		scaleX = (screenWidth - 1) * (1 - margin * 2) / (maxX * 2);
+		scaleY = (screenHeight - 1) * (1 - margin * 2) / (maxX * 2);
+	}
+	else {
+		scaleX = (screenWidth - 1) * (1 - margin * 2) / (maxY * 2);
+		scaleY = (screenHeight - 1) * (1 - margin * 2) / (maxY * 2);
+	}
+	for (size_t n = 0; n < x_data.size(); n++) {
+		x = x_data[n] * scaleX + screenWidth / 2;
+		y = y_data[n] * scaleY + screenHeight / 2;
+		x -= (pointSize - 1) / 2;
+		y -= (pointSize - 1) / 2;
+		for (j = 0; j < pointSize; j++) {
+			for (k = 0; k < pointSize; k++) {
+				if (x+j>=0 && x+j<screenWidth && y+k>=0 && y+k<screenHeight) {
+					pixelsDrawn++;
+					pixels[((int)y+k)*screenWidth + ((int)x+j)] = rgb_data[n];
+				}
+			}
+		}
+	}
+	return pixelsDrawn;
 }
 
 PCD::Plane PCD::segmentPlane(int iter,float threshold,float inlierRatio) {
@@ -770,7 +979,7 @@ void PCD::euclideanClustering(std::vector<std::vector<int>> *indices,float dista
 	bool* visited = new bool[numPoints]();
 	for (int i=0;i<numPoints;i++) {
 		if (visited[i]) continue;
-		printf("%d %lu\n",i,indices->size());
+//		printf("%d %lu\n",i,indices->size());
 		std::vector<int> P,Q,neighbors;
 		Q.push_back(i);
 		visited[i] = true;
@@ -778,7 +987,69 @@ void PCD::euclideanClustering(std::vector<std::vector<int>> *indices,float dista
 			int p = Q[Q.size()-1];
 			Q.pop_back();
 			P.push_back(p);
-			kdtree->search(&neighbors,float_data[p*4],float_data[p*4+1],float_data[p*4+2],distance);
+//			kdtree->search(&neighbors,float_data[p*4],float_data[p*4+1],float_data[p*4+2],distance);
+			for (size_t j=0;j<neighbors.size();j++) {
+				if (!visited[neighbors[j]]) {
+					Q.push_back(neighbors[j]);
+					visited[neighbors[j]] = true;
+				}
+			}
+			neighbors.clear();
+		}
+		if (P.size() >= minSize && P.size() <= maxSize)
+			indices->push_back(P);
+		if (indices->size() >= maxClusters)
+			break;
+	}
+	delete[] visited;
+}
+
+struct Ind {
+	float val;
+	int index;
+};
+
+int compare(const void* v1,const void* v2) {
+	Ind* i1 = (Ind*) v1;
+	Ind* i2 = (Ind*) v2;
+	if (i1->val < i2->val)
+		return -1;
+	else if (i1->val > i2->val)
+		return 1;
+	else
+		return 0;
+}
+
+void PCD::euclideanClustering2(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
+	Ind* byX = new Ind[numPoints];
+	Ind* byY = new Ind[numPoints];
+	Ind* byZ = new Ind[numPoints];
+	for (int i=0;i<numPoints;i++) {
+		byX[i] = {float_data[i*4], i};
+		byY[i] = {float_data[i*4 + 1], i};
+		byZ[i] = {float_data[i*4 + 2], i};
+	}
+	qsort(byX,numPoints,sizeof(Ind),compare);
+	qsort(byY,numPoints,sizeof(Ind),compare);
+	qsort(byZ,numPoints,sizeof(Ind),compare);
+	bool* visited = new bool[numPoints]();
+	for (int i=0;i<numPoints;i++) {
+		if (visited[i]) continue;
+		std::vector<int> P,Q,neighbors;
+		Q.push_back(i);
+		visited[i] = true;
+		while (Q.size() > 0) {
+			int p = Q[Q.size()-1];
+			Q.pop_back();
+			P.push_back(p);
+			Ind key;
+			key.val = float_data[p*4];
+			Ind* xi = (Ind*) bsearch(&key,byX,numPoints,sizeof(Ind),compare);
+			key.val = float_data[p*4+1];
+			Ind* yi = (Ind*) bsearch(&key,byY,numPoints,sizeof(Ind),compare);
+			key.val = float_data[p*4+2];
+			Ind* zi = (Ind*) bsearch(&key,byZ,numPoints,sizeof(Ind),compare);
+//			kdtree->search(&neighbors,float_data[p*4],float_data[p*4+1],float_data[p*4+2],distance);
 			for (size_t j=0;j<neighbors.size();j++) {
 				if (!visited[neighbors[j]]) {
 					Q.push_back(neighbors[j]);

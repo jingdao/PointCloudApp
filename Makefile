@@ -13,8 +13,8 @@ OBJ = $(patsubst %.cpp,%.o,$(SRC))
 #all: $(EXE) bundle2pcd
 all: $(EXE)
 
-$(EXE): $(OBJ)
-	$(CXX) $(LIB_DIRS) -o $(EXE) $(OBJ) $(LDFLAGS)
+#$(EXE): $(OBJ)
+#	$(CXX) $(LIB_DIRS) -o $(EXE) $(OBJ) $(LDFLAGS)
 
 bundle2pcd: bundle2pcd.cpp
 	$(CXX) $(INC) $(LIB_DIRS) -o $@ $< $(LDFLAGS)
@@ -25,14 +25,17 @@ hall_segment: hall_segment.cpp
 correspondence_grouping: correspondence_grouping.cpp
 	$(CXX) $(INC) -I/usr/local/include/vtk-6.2/ $(LIB_DIRS) -o $@ $< $(LDFLAGS2)
 	
-icp: icp.o pcd.o pcd.h kdtree.o kdtree.h descriptor.h descriptor.o normal.h normal.o
-	$(CXX) -o $@ icp.o pcd.o kdtree.o descriptor.o normal.o -llapack
+icp: icp.o pcd.o pcd.h kdtree.o kdtree.h descriptor.h descriptor.o normal.h normal.o hashtable.h hashtable.o
+	$(CXX) -o $@ icp.o pcd.o kdtree.o descriptor.o normal.o hashtable.o -llapack
 
 fpf2jpg: fpf2jpg.cpp
 	$(CXX) -o $@ $< -ljpeg
 
 Viewer: Viewer.cpp Viewer.h
 	$(CXX) -I/usr/local/include/eigen3 -I/usr/include/SDL -o $@ $< -lSDL -lGL -lGLU 
+
+sdlViewer: sdlViewer.o sdlViewer.h pcd.o pcd.h kdtree.o kdtree.h
+	$(CXX) -ggdb3 -o $@ sdlViewer.o pcd.o kdtree.o -lSDL
 
 debug: icp
 
