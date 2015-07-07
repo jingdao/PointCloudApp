@@ -73,20 +73,22 @@ void* HashTable::find(int intKey) {
 	return NULL;
 }
 
-bool HashTable::remove(int intKey) {
+void* HashTable::remove(int intKey) {
 	int h = baseHash(this->size, intKey);
 	int step = stepHash(this->size, intKey);
 	int i;
+	void* removedItem;
 	for (i = 0; i < this->size; i++) {
 		//printf("key: %d hash: %d\n", intKey, h);
 		if (!this->entries[h]) {
-			return false;
+			return NULL;
 		}
 		else if (this->entries[h]!=this->dummy && this->keys[h] == intKey ){
 			this->keys[h] = -1;
+			removedItem = this->entries[h];
 			this->entries[h] = this->dummy;
 			this->load--;
-			return true;
+			return removedItem;
 		}
 		else {
 			h += step;
@@ -94,7 +96,7 @@ bool HashTable::remove(int intKey) {
 		}
 	}
 	printf("Table overload (HashTable)!\n");
-	return false;
+	return NULL;
 }
 
 void HashTable::doubleSize() {
@@ -138,18 +140,25 @@ int HashTable::stepHash(int size, int hashKey) {
 }
 
 //int main(int argc, char* argv[]) {
-//	HashTable* ht = new HashTable();
+//	HashTable ht;
 //	int placeholder;
 //	for (int i=0;i<20;i+=2)
-//		ht->insert(i,&placeholder);
+//		ht.insert(i,&placeholder);
 //	for (int i=0;i<10;i++) {
-//		int* res = (int*) ht->find(i);
+//		int* res = (int*) ht.find(i);
 //		printf("find %d: %s\n",i,res ? "YES" : "NO");
 //	}
 //	for (int i=10;i<20;i++)
-//		printf("remove %i: %s\n",i,ht->remove(i) ? "YES" : "NO");
+//		printf("remove %i: %s\n",i,ht.remove(i) ? "YES" : "NO");
 //	for (int i=5;i<15;i++) {
-//		int* res = (int*) ht->find(i);
+//		int* res = (int*) ht.find(i);
 //		printf("find %d: %s\n",i,res ? "YES" : "NO");
 //	}		
+//	for (int i=5;i<15;i++) {
+//		printf("insert %d: %s\n",i,ht.insert(i,&placeholder) ? "YES" : "NO");
+//	}
+//	for (int i=0;i<20;i++) {
+//		int* res = (int*) ht.find(i);
+//		printf("find %d: %s\n",i,res ? "YES" : "NO");
+//	}
 //}

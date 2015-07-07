@@ -6,6 +6,7 @@
 #include <math.h>
 #include <dirent.h>
 #include <vector>
+#include "hashtable.h"
 #include "kdtree.h"
 #define DEFAULT_FOCAL_LENGTH 1.0f
 
@@ -108,6 +109,6 @@ class PCD {
 		void filterPlane(std::vector<int> *ind,Plane p,float threshold,bool positiveOrNegative);
 		PCD* extractIndices(std::vector<int> *ind);
 		void euclideanClustering(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
-		void euclideanClustering2(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
+		void euclideanClusteringKDTree(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters);
 
 };

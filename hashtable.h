@@ -17,7 +17,7 @@ class HashTable {
 		~HashTable();
 		bool insert(int intKey,void* entry);
 		void* find(int intKey);
-		bool remove(int intKey);
+		void* remove(int intKey);
 	
 	private:
 		int baseHash(int size, int hashKey);

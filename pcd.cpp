@@ -974,7 +974,7 @@ PCD* PCD::extractIndices(std::vector<int> *ind) {
 	return p;
 }
 
-void PCD::euclideanClustering(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
+void PCD::euclideanClusteringKDTree(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
 	if (!kdtree) kdtree = new KdTree(this);
 	bool* visited = new bool[numPoints]();
 	for (int i=0;i<numPoints;i++) {
@@ -987,7 +987,7 @@ void PCD::euclideanClustering(std::vector<std::vector<int>> *indices,float dista
 			int p = Q[Q.size()-1];
 			Q.pop_back();
 			P.push_back(p);
-//			kdtree->search(&neighbors,float_data[p*4],float_data[p*4+1],float_data[p*4+2],distance);
+			kdtree->search(&neighbors,float_data[p*4],float_data[p*4+1],float_data[p*4+2],distance);
 			for (size_t j=0;j<neighbors.size();j++) {
 				if (!visited[neighbors[j]]) {
 					Q.push_back(neighbors[j]);
@@ -1020,7 +1020,35 @@ int compare(const void* v1,const void* v2) {
 		return 0;
 }
 
-void PCD::euclideanClustering2(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
+void* closestBSearch(void* key,void* base,int num,int size,int (*compar)(const void*,const void*),bool lowerOrUpper) {
+	char* A = (char*) base;
+	int l = 0, h = num-1, mid=(l+h)/2, diff;
+	if (lowerOrUpper) { //lower
+		while (l < h) {
+			diff = compar(key,A + mid * size);
+			if (diff > 0)
+				l = mid + 1;
+			else if (diff <= 0)
+				h = mid;
+			mid = (l + h) / 2;
+		}
+	} else { //upper
+		while (l < h - 1) {
+			diff = compar(key,A + mid * size);
+			if (diff >= 0)
+				l = mid;
+			else if (diff < 0)
+				h = mid - 1;
+			mid = (l + h) / 2;
+		}
+		if (l == h - 1) //edge case
+			if (compar(key, A + h * size) >= 0)
+				mid++;
+	}
+	return A + mid * size;
+}
+
+void PCD::euclideanClustering(std::vector<std::vector<int>> *indices,float distance,size_t minSize,size_t maxSize,size_t maxClusters) {
 	Ind* byX = new Ind[numPoints];
 	Ind* byY = new Ind[numPoints];
 	Ind* byZ = new Ind[numPoints];
@@ -1042,14 +1070,29 @@ void PCD::euclideanClustering2(std::vector<std::vector<int>> *indices,float dist
 			int p = Q[Q.size()-1];
 			Q.pop_back();
 			P.push_back(p);
-			Ind key;
-			key.val = float_data[p*4];
-			Ind* xi = (Ind*) bsearch(&key,byX,numPoints,sizeof(Ind),compare);
-			key.val = float_data[p*4+1];
-			Ind* yi = (Ind*) bsearch(&key,byY,numPoints,sizeof(Ind),compare);
-			key.val = float_data[p*4+2];
-			Ind* zi = (Ind*) bsearch(&key,byZ,numPoints,sizeof(Ind),compare);
-//			kdtree->search(&neighbors,float_data[p*4],float_data[p*4+1],float_data[p*4+2],distance);
+			Ind key,*xl,*xh,*yl,*yh,*zl,*zh;
+			key.val = float_data[p*4] - distance;
+			xl = (Ind*) closestBSearch(&key,byX,numPoints,sizeof(Ind),compare,true);
+			key.val = float_data[p*4] + distance;
+			xh = (Ind*) closestBSearch(&key,byX,numPoints,sizeof(Ind),compare,false);
+			key.val = float_data[p*4+1] - distance;
+			yl = (Ind*) closestBSearch(&key,byY,numPoints,sizeof(Ind),compare,true);
+			key.val = float_data[p*4+1] + distance;
+			yh = (Ind*) closestBSearch(&key,byY,numPoints,sizeof(Ind),compare,false);
+			key.val = float_data[p*4+2] - distance;
+			zl = (Ind*) closestBSearch(&key,byZ,numPoints,sizeof(Ind),compare,true);
+			key.val = float_data[p*4+2] + distance;
+			zh = (Ind*) closestBSearch(&key,byZ,numPoints,sizeof(Ind),compare,false);
+			HashTable ht;
+			int closeX,closeY,closeZ;
+			for (Ind* k = xl; k <= xh; k++) ht.insert(k->index,&closeX);
+			for (Ind* k = yl; k <= yh; k++) if (ht.remove(k->index)) ht.insert(k->index,&closeY);
+			for (Ind* k = zl; k <= zh; k++) if (ht.remove(k->index) == &closeY) ht.insert(k->index,&closeZ);
+			for (int k=0; k<ht.size; k++) {
+				if (ht.entries[k] == &closeZ) {
+					neighbors.push_back(ht.keys[k]);
+				}
+			}
 			for (size_t j=0;j<neighbors.size();j++) {
 				if (!visited[neighbors[j]]) {
 					Q.push_back(neighbors[j]);
@@ -1063,5 +1106,8 @@ void PCD::euclideanClustering2(std::vector<std::vector<int>> *indices,float dist
 		if (indices->size() >= maxClusters)
 			break;
 	}
+	delete[] byX;
+	delete[] byY;
+	delete[] byZ;
 	delete[] visited;
 }

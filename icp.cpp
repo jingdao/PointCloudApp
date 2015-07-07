@@ -77,11 +77,11 @@ void fileConversion(char* in, char* out) {
 		q = p->extractIndices(&ind);
 
 //		q = p;
-		q->kdtree = new KdTree(q);
-		printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
+//		q->kdtree = new KdTree(q);
+//		printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 		std::vector<std::vector<int>> clusters;
 		q->euclideanClustering(&clusters,0.1,100,50000,200);
-//		q->writeClustersToPCD(&clusters,out);
+		q->writeClustersToPCD(&clusters,out);
 
 		delete p;
 		delete q;
