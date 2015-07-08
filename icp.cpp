@@ -108,6 +108,8 @@ void fileConversion(char* in, char* out) {
 		p->writeToPLY(out);
 	else if (strncmp(out + l - 4,".off",4) == 0)
 		p->writeToOFF(out);
+	else if (strncmp(out + l - 4,".obj",4) == 0)
+		p->writeToOBJ(out);
 	delete p;
 }
 

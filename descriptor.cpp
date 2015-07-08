@@ -88,10 +88,10 @@ void Descriptor::setPCA(double* lambda_real, double* v) {
 		memcpy(v+6, v, 3 * sizeof(double));
 		memcpy(v, tmpV, 3 * sizeof(double));
 	}
-	printf("lambda: %f %f %f\n",lambda_real[0],lambda_real[1],lambda_real[2]);
-	printf("v1: %f %f %f\n",v[0],v[1],v[2]);
-	printf("v2: %f %f %f\n",v[3],v[4],v[5]);
-	printf("v3: %f %f %f\n",v[6],v[7],v[8]);
+//	printf("lambda: %f %f %f\n",lambda_real[0],lambda_real[1],lambda_real[2]);
+//	printf("v1: %f %f %f\n",v[0],v[1],v[2]);
+//	printf("v2: %f %f %f\n",v[3],v[4],v[5]);
+//	printf("v3: %f %f %f\n",v[6],v[7],v[8]);
 	//compute projections
 	float minScale[3], maxScale[3];
 	for (int j=0;j<pointcloud->numPoints;j++) {
@@ -139,6 +139,12 @@ void Descriptor::getPCA_XY(double* lambda_real,double* v) {
 	//compute PCA
 	double lambda_imag[2];
 	Normal::eigenvalue(2,cov,lambda_real,lambda_imag,v);
+	//complete 3D structure
+	lambda_real[2] = -1;
+	v[4] = v[3];
+	v[3] = v[2];
+	v[2] = v[5] = v[6] = v[7] = 0;
+	v[8] = 1;
 }
 
 void Descriptor::kMeansClustering(std::vector<std::vector<int>> *indices) {

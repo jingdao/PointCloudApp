@@ -88,6 +88,7 @@ class PCD {
 		void writeToPLY(const char* filename);
 		void writeClustersToPCD(std::vector<std::vector<int>> *indices,const char* dir);
 		void writeToOFF(const char* filename);
+		void writeToOBJ(const char* filename);
 
 		static PCD* LoadFromPLY(const char* fileName);
 		static PCD* LoadFromMatrix(const char* fileName);
