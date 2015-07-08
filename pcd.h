@@ -8,6 +8,7 @@
 #include <vector>
 #include "hashtable.h"
 #include "kdtree.h"
+#include "descriptor.h"
 #define DEFAULT_FOCAL_LENGTH 1.0f
 
 class KdTree;

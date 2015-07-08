@@ -293,9 +293,33 @@ void PCD::writeToOFF(const char* filename) {
 		return;
 	}
 
+	fprintf(f,"OFF\n8 6 12\n");
+#define USE_OBB 1
+#if USE_OBB
+	Descriptor d(this);
+	double lambda[3], v[9];
+	d.getPCA_XY(lambda,v);
+	lambda[2] = -1;
+	v[4] = v[3];
+	v[3] = v[2];
+	v[2] = v[5] = v[6] = v[7] = 0;
+	v[8] = 1;
+	d.setPCA(lambda,v);
+	for (int i=0;i<8;i++) {
+		float coords[3];
+		for (int j=0;j<3;j++) {
+			coords[j] = d.bbCenter[j];
+			for (int axis=0;axis<3;axis++) {
+				float sign = (i & 1<<axis) ? 1 : -1;
+				coords[j] += sign * d.principalLengths[axis] / 2 * d.principalAxes[axis][j];
+			}
+			fprintf(f,"%f ",coords[j]);
+		}
+		fprintf(f,"\n");
+	}
+#else
 	if (!kdtree) kdtree = new KdTree(this);
 	KdTree::Cube bb = kdtree->getBoundingBox();
-	fprintf(f,"OFF\n8 6 12\n");
 	fprintf(f,"%f %f %f\n",bb.x1,bb.y1,bb.z1);
 	fprintf(f,"%f %f %f\n",bb.x2,bb.y1,bb.z1);
 	fprintf(f,"%f %f %f\n",bb.x1,bb.y2,bb.z1);
@@ -304,6 +328,7 @@ void PCD::writeToOFF(const char* filename) {
 	fprintf(f,"%f %f %f\n",bb.x2,bb.y1,bb.z2);
 	fprintf(f,"%f %f %f\n",bb.x1,bb.y2,bb.z2);
 	fprintf(f,"%f %f %f\n",bb.x2,bb.y2,bb.z2);
+#endif
 	fprintf(f,"4 0 1 3 2 1 0 0 0\n"
 	"4 0 4 5 1 1 0 0 0\n"
 	"4 0 2 6 4 1 0 0 0\n"
@@ -487,13 +512,13 @@ PCD* PCD::LoadFromBundler(const char* fileName) {
 	}
 
 	//draw lines from camera to keypoints on point cloud
-	PCD* lines = new PCD(0);
+	PCD lines(0);
 	const float interval = 2;
 	const int maxLines = 10;
 	for (int j=0;j<num_cameras;j++) {
 		int numLines = lineInfo[j].size() / 7;
 		for (int i=0;i<numLines&&i<maxLines;i++) {
-			lines->drawLine(
+			lines.drawLine(
 				lineInfo[j][i * 7],
 				lineInfo[j][i * 7 + 1],
 				lineInfo[j][i * 7 + 2],
@@ -505,10 +530,9 @@ PCD* PCD::LoadFromBundler(const char* fileName) {
 			);
 		}
 	}
-	lines->drawAxis(0,0,0,NULL,10,1);
-	printf("Wrote %d points\n",lines->numPoints);
-	lines->writeToPCD("p2.pcd");
-	delete lines;
+	lines.drawAxis(0,0,0,NULL,10,1);
+	printf("Wrote %d points\n",lines.numPoints);
+	lines.writeToPCD("p2.pcd");
 
 	fclose(f);
 	delete[] camera_positions;
@@ -690,16 +714,15 @@ PCD* PCD::LoadFromCluster(const char* dir) {
 	float colorChoice[] = {16777215, 255<<16, 255<<8, 255};
 	for (size_t i=0;i<labels.size();i++) {
 		snprintf(buffer_c,64,"%lu-cloud.pcd",i);
-		PCD* cloud = new PCD(buffer);
+		PCD cloud(buffer);
 		int offset = combined->numPoints;
-		combined->expand(offset + cloud->numPoints);
-		for (int j = 0;j<cloud->numPoints;j++) {
-			combined->float_data[(offset+j) * 4] = cloud->float_data[j * 4];
-			combined->float_data[(offset+j) * 4 + 1] = cloud->float_data[j * 4 + 1];
-			combined->float_data[(offset+j) * 4 + 2] = cloud->float_data[j * 4 + 2];
+		combined->expand(offset + cloud.numPoints);
+		for (int j = 0;j<cloud.numPoints;j++) {
+			combined->float_data[(offset+j) * 4] = cloud.float_data[j * 4];
+			combined->float_data[(offset+j) * 4 + 1] = cloud.float_data[j * 4 + 1];
+			combined->float_data[(offset+j) * 4 + 2] = cloud.float_data[j * 4 + 2];
 			combined->float_data[(offset+j) * 4 + 3] = colorChoice[labels[i]];
 		}
-		delete cloud;
 	}
 
 	return combined;

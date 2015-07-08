@@ -69,6 +69,9 @@ void fileConversion(char* in, char* out) {
 		p = new PCD(in);
 	} else if (strncmp(in + l - 4,".bin",4) == 0) {
 		p = PCD::LoadFromKITTI(in,NULL);
+		printf("Loaded %s (%s, %d points)\n",in,
+			p->data_storage==PCD::ASCII ? "ascii" : "binary",
+			p->numPoints);
 
 		PCD::Plane  coefficients = p->segmentPlane(10000,0.1,0.4);
 		printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
@@ -77,10 +80,10 @@ void fileConversion(char* in, char* out) {
 		q = p->extractIndices(&ind);
 
 //		q = p;
-//		q->kdtree = new KdTree(q);
-//		printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
+		q->kdtree = new KdTree(q);
+		printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 		std::vector<std::vector<int>> clusters;
-		q->euclideanClustering(&clusters,0.1,100,50000,200);
+		q->euclideanClusteringKDTree(&clusters,0.1,100,50000,200);
 		q->writeClustersToPCD(&clusters,out);
 
 		delete p;
@@ -115,8 +118,6 @@ int main(int argc,char* argv[]) {
 	if (argc == 3)
 		fileConversion(argv[1], argv[2]);
 
-
-//	Descriptor* d = new Descriptor(argv[2]);
 //	printf("Loaded %s (%d points)\n",f, d->numPoints);
 //	std::vector<std::vector<int>> clusters;
 //	d->kMeansClustering(&clusters);

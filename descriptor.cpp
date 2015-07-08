@@ -27,8 +27,118 @@ Descriptor::Descriptor(const char* filename) {
 	fclose(f);
 }
 
+Descriptor::Descriptor(PCD* p) {
+	numPoints = 1;
+	this->pointcloud = p;
+	this->data = NULL;
+}
+
 Descriptor::~Descriptor() {
 	if (data) delete[] data;
+}
+
+void Descriptor::getPCA(double* lambda_real,double* v) {
+	double cov[9] = {}; //column major
+	PCD::Quaternion center = pointcloud->getCentroid(NULL);
+	for (int j=0;j<pointcloud->numPoints;j++) {
+		float deltaP[3] = {
+			pointcloud->float_data[j * 4] - center.i,
+			pointcloud->float_data[j * 4 + 1] - center.j,
+			pointcloud->float_data[j * 4 + 2] - center.k,
+		};
+		cov[0] += deltaP[0] * deltaP[0];
+		cov[1] += deltaP[1] * deltaP[0];
+		cov[2] += deltaP[2] * deltaP[0];
+		cov[3] += deltaP[0] * deltaP[1];
+		cov[4] += deltaP[1] * deltaP[1];
+		cov[5] += deltaP[2] * deltaP[1];
+		cov[6] += deltaP[0] * deltaP[2];
+		cov[7] += deltaP[1] * deltaP[2];
+		cov[8] += deltaP[2] * deltaP[2];
+	}
+	//compute PCA
+	double lambda_imag[3];
+	Normal::eigenvalue(3,cov,lambda_real,lambda_imag,v);
+}
+
+void Descriptor::setPCA(double* lambda_real, double* v) {
+	//sort by eigenvalue
+	double tmpL,tmpV[3];
+	if (lambda_real[0] < lambda_real[1]) {
+		tmpL = lambda_real[1];
+		lambda_real[1] = lambda_real[0];
+		lambda_real[0] = tmpL;
+		memcpy(tmpV, v+3, 3 * sizeof(double));
+		memcpy(v+3, v, 3 * sizeof(double));
+		memcpy(v, tmpV, 3 * sizeof(double));
+	}
+	if (lambda_real[1] < lambda_real[2]) {
+		tmpL = lambda_real[2];
+		lambda_real[2] = lambda_real[1];
+		lambda_real[1] = tmpL;
+		memcpy(tmpV, v+6, 3 * sizeof(double));
+		memcpy(v+6, v+3, 3 * sizeof(double));
+		memcpy(v+3, tmpV, 3 * sizeof(double));
+	}
+	if (lambda_real[0] < lambda_real[2]) {
+		tmpL = lambda_real[2];
+		lambda_real[2] = lambda_real[0];
+		lambda_real[0] = tmpL;
+		memcpy(tmpV, v+6, 3 * sizeof(double));
+		memcpy(v+6, v, 3 * sizeof(double));
+		memcpy(v, tmpV, 3 * sizeof(double));
+	}
+	printf("lambda: %f %f %f\n",lambda_real[0],lambda_real[1],lambda_real[2]);
+	printf("v1: %f %f %f\n",v[0],v[1],v[2]);
+	printf("v2: %f %f %f\n",v[3],v[4],v[5]);
+	printf("v3: %f %f %f\n",v[6],v[7],v[8]);
+	//compute projections
+	float minScale[3], maxScale[3];
+	for (int j=0;j<pointcloud->numPoints;j++) {
+		for (int i=0;i<3;i++) {
+			float dotProduct =
+				pointcloud->float_data[j*4] * v[i*3] +
+				pointcloud->float_data[j*4+1] * v[i*3+1] +
+				pointcloud->float_data[j*4+2] * v[i*3+2];
+			if (j==0 || dotProduct < minScale[i])
+				minScale[i] = dotProduct;
+			if (j==0 || dotProduct > maxScale[i])
+				maxScale[i] = dotProduct;				
+		}
+	}
+	float cx=0,cy=0,cz=0;
+	for (int i=0;i<3;i++) {
+		cx+=(minScale[i]+maxScale[i])/2 * v[i*3];
+		cy+=(minScale[i]+maxScale[i])/2 * v[i*3+1];
+		cz+=(minScale[i]+maxScale[i])/2 * v[i*3+2];
+	}
+	//set member variables
+	this->bbCenter[0] = cx;
+	this->bbCenter[1] = cy;
+	this->bbCenter[2] = cz;
+	for (int i=0;i<3;i++) {
+		this->principalLengths[i] = maxScale[i] - minScale[i];
+		for (int j=0;j<3;j++)
+			this->principalAxes[i][j] = v[i * 3 + j];
+	}
+}
+
+void Descriptor::getPCA_XY(double* lambda_real,double* v) {
+	double cov[4] = {}; //column major
+	PCD::Quaternion center = pointcloud->getCentroid(NULL);
+	for (int j=0;j<pointcloud->numPoints;j++) {
+		float deltaP[2] = {
+			pointcloud->float_data[j * 4] - center.i,
+			pointcloud->float_data[j * 4 + 1] - center.j,
+		};
+		cov[0] += deltaP[0] * deltaP[0];
+		cov[1] += deltaP[1] * deltaP[0];
+		cov[2] += deltaP[0] * deltaP[1];
+		cov[3] += deltaP[1] * deltaP[1];
+	}
+	//compute PCA
+	double lambda_imag[2];
+	Normal::eigenvalue(2,cov,lambda_real,lambda_imag,v);
 }
 
 void Descriptor::kMeansClustering(std::vector<std::vector<int>> *indices) {
