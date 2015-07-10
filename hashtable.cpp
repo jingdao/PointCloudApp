@@ -1,5 +1,6 @@
 #include "hashtable.h"
 
+int HashTable::STRING_HASH_CONSTANT = 5381;
 double HashTable::BASE_HASH_CONSTANT = 0.618033988;
 double HashTable::STEP_HASH_CONSTANT = 0.707106781;
 int HashTable::INITIAL_TABLE_SIZE = 8;
@@ -99,6 +100,21 @@ void* HashTable::remove(int intKey) {
 	return NULL;
 }
 
+bool HashTable::insert(void* key, int keySize, void* entry) {
+	int intKey = getIntKey((char*) key, keySize);
+	return this->insert(intKey,entry);
+}
+
+void* HashTable::find(void* key, int keySize) {
+	int intKey = getIntKey((char*) key, keySize);
+	return this->find(intKey);
+}
+
+void* HashTable::remove(void* key, int keySize) {
+	int intKey = getIntKey((char*) key, keySize);
+	return this->remove(intKey);
+}
+
 void HashTable::doubleSize() {
 	//printf("Now doubling size of hash table\n");
 	int newSize = this->size*2;
@@ -139,6 +155,17 @@ int HashTable::stepHash(int size, int hashKey) {
 	return res % 2 ? res : res + 1; 
 }
 
+int HashTable::getIntKey(char* inputString, int len) {
+	//djb2 algorithm http://www.cse.yorku.ca/~oz/hash.html
+	int h = STRING_HASH_CONSTANT;
+	for (int i=0;i<len;i++) {
+		unsigned int c = *inputString++;
+		h = (h << 5) + h + c;
+	}
+	if (h<0) h=-h;
+	return h;
+}
+
 //int main(int argc, char* argv[]) {
 //	HashTable ht;
 //	int placeholder;
@@ -161,4 +188,16 @@ int HashTable::stepHash(int size, int hashKey) {
 //		int* res = (int*) ht.find(i);
 //		printf("find %d: %s\n",i,res ? "YES" : "NO");
 //	}
+//
+//	//insert non-integer data
+//	char* str = "string";
+//	printf("insert string: %s\n",ht.insert(str,6,&placeholder) ? "YES" : "NO");
+//	double p = 3.1416;
+//	printf("insert %f: %s\n",p,ht.insert(&p,sizeof(double),&placeholder) ? "YES" : "NO");
+//	int* res = (int*) ht.find(str,6);
+//	printf("find string: %s\n",res ? "YES" : "NO");
+//	printf("remove %f: %s\n",p,ht.remove(&p,sizeof(double)) ? "YES" : "NO");
+//	res = (int*) ht.find(&p,sizeof(double));
+//	printf("find %f: %s\n",p,res ? "YES" : "NO");
+//	
 //}

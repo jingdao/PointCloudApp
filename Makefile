@@ -36,6 +36,9 @@ Viewer: Viewer.cpp Viewer.h
 
 sdlViewer: sdlViewer.o sdlViewer.h pcd.o pcd.h kdtree.o kdtree.h
 	$(CXX) -ggdb3 -o $@ sdlViewer.o pcd.o kdtree.o -lSDL
+	
+hashtable: hashtable.h hashtable.o
+	$(CXX) -ggdb3 -o $@ hashtable.o
 
 debug: main
 
