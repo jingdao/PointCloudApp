@@ -408,6 +408,10 @@ PCD* PCD::LoadFromPLY(const char* fileName) {
 					pcd->float_data + i * 4 + 2, &r, &g, &b) == 6) {
 					rgb = (r<<16) | (g<<8) | b;
 					pcd->float_data[i * 4 + 3] = (float) rgb;
+				} else if (sscanf(buf, "%f %f %f", pcd->float_data + i * 4, pcd->float_data + i * 4 + 1,
+					pcd->float_data + i * 4 + 2) == 3) {
+					rgb = 255;
+					pcd->float_data[i * 4 + 3] = (float) rgb;
 				} else {
 					printf("Error parsing %s\n",fileName);
 					printf("Line %d: %s\n",i,buf);

@@ -67,6 +67,8 @@ void fileConversion(char* in, char* out) {
 	int l = strlen(in);
 	if (strncmp(in + l - 4,".pcd",4) == 0) {
 		p = new PCD(in);
+	} else if (strncmp(in + l - 4,".ply",4) == 0) {
+		p = PCD::LoadFromPLY(in);
 	} else if (strncmp(in + l - 4,".bin",4) == 0) {
 		p = PCD::LoadFromKITTI(in,NULL);
 		printf("Loaded %s (%s, %d points)\n",in,

@@ -1,0 +1,15 @@
+*
+!.gitignore
+!Makefile
+!icp.cpp
+!pcd.h
+!pcd.cpp
+!kdtree.cpp
+!kdtree.h
+!descriptor.h
+!descriptor.cpp
+!lapack.h
+!normal.h
+!normal.cpp
+!hashtable.h
+!hashtable.cpp
