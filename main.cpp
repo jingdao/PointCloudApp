@@ -5,13 +5,13 @@
 
 void testEigenvalue() {
 	int n=4;
-	double A[n*n] = {0.35,0.09,-0.44,0.25,
+	double A[4*4] = {0.35,0.09,-0.44,0.25,
 					 0.45,0.07,-0.33,-0.32,
 					 -0.14,-0.54,-0.03,-0.13,
 					 -0.17,0.35,0.17,0.11};
-	double lambda_real[n] = {};
-	double lambda_imag[n] = {};
-	double v[n*n] = {};
+	double lambda_real[4] = {};
+	double lambda_imag[4] = {};
+	double v[4*4] = {};
 	Normal::eigenvalue(n,A,lambda_real,lambda_imag,v);
 	printf("lambda: ");
 	for (int i=0;i<n;i++)
@@ -34,13 +34,13 @@ void testEigenvalue() {
 
 void testSVD() {
 	int m=6,n=4,l=(m>n?n:m);
-	double A[m*n] = {2.27,0.28,-0.48,1.07,-2.35,0.62,
+	double A[6*4] = {2.27,0.28,-0.48,1.07,-2.35,0.62,
 					-1.54,-1.67,-3.09,1.22,2.93,-7.39,
 					1.15,0.94,0.99,0.79,-1.45,1.03,
 					-1.94,-0.78,-0.21,0.63,2.30,-2.57};
-	double U[m*m] = {};
-	double S[l] = {};
-	double VT[n*n] = {};
+	double U[6*6] = {};
+	double S[4] = {};
+	double VT[4*4] = {};
 	Normal::svd(m,n,A,U,S,VT);
 	printf("S: ");
 	for (int i=0;i<l;i++)
