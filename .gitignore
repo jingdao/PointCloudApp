@@ -13,3 +13,9 @@
 !normal.cpp
 !hashtable.h
 !hashtable.cpp
+!kitti
+kitti/*
+!kitti/pipeline.sh
+!kitti/writeLabels.py
+!kitti/writeDescriptors.py
+
