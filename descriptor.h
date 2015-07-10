@@ -20,9 +20,12 @@ class Descriptor {
 		double principalAxes[3][3];
 		double bbCenter[3];
 
+		Descriptor();
 		Descriptor(const char* filename);
 		Descriptor(PCD* p);
+		static Descriptor* LoadFromDir(const char* dir);
 		~Descriptor();
+		void writeToPCD(const char* filename);
 
 		void getPCA(double* lambda_real,double* v);
 		void getPCA_XY(double* lambda_real,double* v);

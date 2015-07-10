@@ -1,5 +1,10 @@
 #include "descriptor.h"
 
+Descriptor::Descriptor() {
+	this->pointcloud = NULL;
+	this->data = NULL;
+}
+
 Descriptor::Descriptor(const char* filename) {
 	FILE* f = fopen(filename,"r");
 	if (!f) {
@@ -35,6 +40,69 @@ Descriptor::Descriptor(PCD* p) {
 
 Descriptor::~Descriptor() {
 	if (data) delete[] data;
+}
+
+Descriptor* Descriptor::LoadFromDir(const char* dir) {
+	Descriptor* res = new Descriptor();
+
+	char buffer[1024];
+	int ndir = strlen(dir);
+	strncpy(buffer,dir,ndir);
+	char* buffer_c = buffer + ndir;
+	*buffer_c++ = '/';
+
+	std::vector<double> measurements;
+	int j;
+	for (j=0;;j++) {
+		snprintf(buffer_c,64,"%d-cloud.pcd",j);
+		PCD cloud(buffer);
+		if (cloud.numPoints==0)
+			break;
+		Descriptor desc(&cloud);
+		double lambda[3],v[9];
+		desc.getPCA_XY(lambda,v);
+		desc.setPCA(lambda,v);
+		measurements.push_back(desc.principalLengths[0]); //length;
+		measurements.push_back(desc.principalLengths[1]); //width;
+		measurements.push_back(desc.principalLengths[2]); //height;
+	}
+
+	//set data
+	res->numPoints = j;
+	res->dimension = 3;
+	res->data = new float[res->numPoints * res->dimension];
+	for (size_t i=0;i<measurements.size();i++) {
+		res->data[i] = measurements[i];
+	}
+
+	return res;
+}
+
+void Descriptor::writeToPCD(const char* filename) {
+	if (!filename)
+		return;
+	FILE* f = fopen(filename, "w");
+	if (!f) {
+		printf("Cannot write to file: %s\n", filename);
+		return;
+	}
+	fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
+	"VERSION 0.7\n"
+	"FIELDS descriptor\n"
+	"SIZE 4\n"
+	"TYPE F\n"
+	"COUNT %d\n"
+	"WIDTH %d\n"
+	"HEIGHT 1\n"
+	"POINTS %d\n"
+	"DATA ascii\n",dimension,numPoints,numPoints);
+	for (int i=0;i<numPoints;i++) {
+		for (int j=0;j<dimension;j++)
+			fprintf(f,"%f ",data[i*dimension+j]);
+		fprintf(f,"\n");
+	}
+	fclose(f);
+	printf("Wrote %d points to %s\n",numPoints,filename);
 }
 
 void Descriptor::getPCA(double* lambda_real,double* v) {

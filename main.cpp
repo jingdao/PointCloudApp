@@ -93,7 +93,15 @@ void fileConversion(char* in, char* out) {
 		p = PCD::LoadFromPTS(in);
 	} else if (DIR* d = opendir(in)){
 		closedir(d);
-		p = PCD::LoadFromCluster(in);
+		l = strlen(out);
+		if (strncmp(out + l - 14,"descriptor.pcd",14) == 0) {
+			Descriptor* d = Descriptor::LoadFromDir(in);
+			d->writeToPCD(out);
+			delete d;
+			return;
+		} else {
+			p = PCD::LoadFromCluster(in);
+		}
 	}
 
 
