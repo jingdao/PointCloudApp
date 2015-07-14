@@ -22,4 +22,4 @@ kitti/*
 tools/*
 !tools/esf.cpp
 !tools/viz.cpp
-
+!tools/CMakeLists.txt

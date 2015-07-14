@@ -9,8 +9,9 @@ for i in `seq -w $start $end`
 do
 	mkdir clusters$i
 	#read velodyne data and cluster
-	../main $velodyne_dir/data/$i.bin clusters$i/
+	../main $velodyne_dir/$i.bin clusters$i/ &
 done
+wait
 
 for i in `seq -w $start $end`
 	#user input for labels
