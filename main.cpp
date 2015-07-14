@@ -3,6 +3,9 @@
 #include "normal.h"
 #include <string>
 
+int numCommandLineArgs;
+char** commandLineArgs;
+
 void testEigenvalue() {
 	int n=4;
 	double A[4*4] = {0.35,0.09,-0.44,0.25,
@@ -75,17 +78,22 @@ void fileConversion(char* in, char* out) {
 			p->data_storage==PCD::ASCII ? "ascii" : "binary",
 			p->numPoints);
 
-		PCD::Plane  coefficients = p->segmentPlane(10000,0.1,0.4);
+		float segThreshold = 0.1, filterThreshold = 0.5, clusterThreshold = 0.4;
+		
+		PCD::Plane  coefficients = p->segmentPlane(10000,segThreshold,0.5);
 		printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
 		std::vector<int> ind;
-		p->filterPlane(&ind,coefficients,0.1,false);
+		p->filterPlane(&ind,coefficients,filterThreshold,false);
 		q = p->extractIndices(&ind);
+		char originalPath[256];
+		snprintf(originalPath,255,"%s/original.pcd",out);
+		q->writeToPCD(originalPath);
 
 //		q = p;
 		q->kdtree = new KdTree(q);
 		printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 		std::vector<std::vector<int>> clusters;
-		q->euclideanClusteringKDTree(&clusters,0.1,100,50000,200);
+		q->euclideanClusteringKDTree(&clusters,clusterThreshold,100,100000,200);
 		q->writeClustersToPCD(&clusters,out);
 
 		delete p;
@@ -126,8 +134,10 @@ void fileConversion(char* in, char* out) {
 int main(int argc,char* argv[]) {
 	srand(time(NULL));
 //	srand(0);
+	numCommandLineArgs = argc;
+	commandLineArgs = argv;
 
-	if (argc == 3)
+	if (argc >= 3)
 		fileConversion(argv[1], argv[2]);
 
 //	printf("Loaded %s (%d points)\n",f, d->numPoints);

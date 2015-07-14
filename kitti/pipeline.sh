@@ -8,15 +8,19 @@ svm_dir=/home/jd/Downloads/libsvm-3.20
 for i in `seq -w $start $end`
 do
 	mkdir clusters$i
-
 	#read velodyne data and cluster
-	#../main $velodyne_dir/data/$i.bin clusters$i/
+	../main $velodyne_dir/data/$i.bin clusters$i/
+done
+
+for i in `seq -w $start $end`
+	#user input for labels
+	../tools/viz clusters$i > clusters$i/labels.txt
 
 	#compute descriptors
-	#for j in cluster$i/*.pcd
-	#do
-	#	../example/ourcvfh $j $j-esf.pcd
-	#done
+	for j in cluster$i/*.pcd
+	do
+		../tools/esf $j $j-esf.pcd
+	done
 
 	#write labels
 	./writeLabels.py clusters$i/

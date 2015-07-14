@@ -18,4 +18,8 @@ kitti/*
 !kitti/pipeline.sh
 !kitti/writeLabels.py
 !kitti/writeDescriptors.py
+!tools
+tools/*
+!tools/esf.cpp
+!tools/viz.cpp
 
