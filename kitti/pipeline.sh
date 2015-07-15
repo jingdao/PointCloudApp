@@ -20,7 +20,7 @@ do
 	../tools/viz clusters$i > clusters$i/labels.txt
 
 	#compute descriptors
-	for j in clusters$i/*.pcd
+	for j in clusters$i/*-cloud.pcd
 	do
 		../tools/esf $j $j-esf.pcd
 	done
