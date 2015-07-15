@@ -18,13 +18,13 @@ void keyboardEventOccurred (const pcl::visualization::KeyboardEvent &event, void
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer = 
 		*static_cast<boost::shared_ptr<pcl::visualization::PCLVisualizer> *> (viewer_void);
 	if (event.keyDown ()) {
-		if (event.getKeySym() == "b") {
+		if (event.getKeySym() == "v") {
+			std::cout << '0' <<std::endl;
+		} else if (event.getKeySym() == "b") {
 			std::cout << '1' <<std::endl;
-		}
-		if (event.getKeySym() == "n") {
+		} else if (event.getKeySym() == "n") {
 			std::cout << '2' <<std::endl;
-		}
-		if (event.getKeySym() == "m") {
+		} else if (event.getKeySym() == "m") {
 			std::cout << '3' <<std::endl;
 		}
 //		std::cout << event.getKeySym() << std::endl;

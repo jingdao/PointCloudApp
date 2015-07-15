@@ -8,17 +8,19 @@ svm_dir=/home/jd/Downloads/libsvm-3.20
 for i in `seq -w $start $end`
 do
 	mkdir clusters$i
+	rm clusters$i/*-cloud.pcd
 	#read velodyne data and cluster
 	../main $velodyne_dir/$i.bin clusters$i/ &
 done
 wait
 
 for i in `seq -w $start $end`
+do
 	#user input for labels
 	../tools/viz clusters$i > clusters$i/labels.txt
 
 	#compute descriptors
-	for j in cluster$i/*.pcd
+	for j in clusters$i/*.pcd
 	do
 		../tools/esf $j $j-esf.pcd
 	done
