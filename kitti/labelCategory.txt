@@ -1,0 +1,4 @@
+0: others
+1: car
+2: person/bicycle
+3: wall/building

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+numVertices=`wc -l < $1`
+
+echo "ply" >> tmp.txt
+echo "format ascii 1.0" >> tmp.txt
+echo "element vertex $numVertices" >> tmp.txt
+echo "property float x" >> tmp.txt
+echo "property float y" >> tmp.txt
+echo "property float z" >> tmp.txt
+echo "end_header" >> tmp.txt
+
+cat tmp.txt $1 > tmp2.txt
+mv tmp2.txt $1
+rm tmp.txt
