@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 x = {}
 y = {}
@@ -12,7 +13,10 @@ for l in labelFile:
 labelFile.close()
 
 categories = []
-categoryFile = open('../labelCategory.txt')
+if os.path.isfile('labelCategory.txt'):
+	categoryFile = open('labelCategory.txt')
+else:
+	categoryFile = open('../labelCategory.txt')
 for l in categoryFile:
 	categories.append(l)
 categoryFile.close()

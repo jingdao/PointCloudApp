@@ -26,6 +26,10 @@ void keyboardEventOccurred (const pcl::visualization::KeyboardEvent &event, void
 			std::cout << '2' <<std::endl;
 		} else if (event.getKeySym() == "m") {
 			std::cout << '3' <<std::endl;
+		} else if (event.getKeySym() == "comma") {
+			std::cout << '4' <<std::endl;
+		} else if (event.getKeySym() == "period") {
+			std::cout << '5' <<std::endl;
 		}
 //		std::cout << event.getKeySym() << std::endl;
 		idx++;

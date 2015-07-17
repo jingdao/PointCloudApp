@@ -4,6 +4,8 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+add_executable(cluster cluster.cpp)
+target_link_libraries(cluster ${PCL_LIBRARIES})
 add_executable (esf esf.cpp)
 target_link_libraries (esf ${PCL_LIBRARIES})
 add_executable (viz viz.cpp)

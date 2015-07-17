@@ -25,4 +25,8 @@ kitti/*
 tools/*
 !tools/esf.cpp
 !tools/viz.cpp
+!tools/cluster.cpp
 !tools/CMakeLists.txt
+!cloud
+cloud/*
+!cloud/pipeline_single.sh

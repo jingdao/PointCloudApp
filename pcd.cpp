@@ -765,7 +765,7 @@ PCD* PCD::LoadFromCluster(const char* dir) {
 	fclose(labelFile);
 
 	PCD* combined = new PCD(0);
-	float colorChoice[] = {16777215, 255<<16, 255<<8, 255};
+	float colorChoice[] = {16777215, 255<<16, 255<<8, 255, (255<<16)|(255<<8), (255<<16)|255, (255<<8)|255};
 	for (size_t i=0;i<labels.size();i++) {
 		snprintf(buffer_c,64,"%lu-cloud.pcd",i);
 		PCD cloud(buffer);
