@@ -21,6 +21,7 @@ kitti/*
 !kitti/writeDescriptors.py
 !kitti/labelCategory.txt
 !kitti/plotESF.py
+!kitti/countScore.py
 !tools
 tools/*
 !tools/esf.cpp
