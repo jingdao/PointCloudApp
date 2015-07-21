@@ -22,6 +22,7 @@ kitti/*
 !kitti/labelCategory.txt
 !kitti/plotESF.py
 !kitti/countScore.py
+!kitti/svm_pipeline.sh
 !tools
 tools/*
 !tools/esf.cpp
