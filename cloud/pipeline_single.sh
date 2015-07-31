@@ -10,9 +10,9 @@ rm $outputDir/*
 leafX=0.05
 leafY=0.05
 leafZ=0.05
-segThreshold=0.1
+segThreshold=0.2
 clusterThreshold=0.5
-minCluster=500
+minCluster=100
 maxCluster=200000
 
 echo "leaf: $leafX $leafY $leafZ" > $outputDir/param.txt

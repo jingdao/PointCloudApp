@@ -1,14 +1,31 @@
 #!/bin/bash
 
-start=0000000000
-end=0000000120
+start=07
+end=19
 svm_dir=/home/jd/Downloads/libsvm-3.20
+script_dir=/home/jd/Documents/PointCloudApp/kitti
 
+computeDescriptors=false
 scaleOption=true
-parameterOption=false
+parameterOption=true
 ignoreZeroOption=false
-kernel=2
+kernel=0
 svm_type=0
+
+#compute descriptors
+if $computeDescriptors
+then
+	for f in `seq -w $start $end`
+	do
+		for j in clusters$f/*-cloud.pcd
+		do
+			$script_dir/../tools/esf $j $j-esf.pcd
+		done
+
+		#write labels
+		$script_dir/writeLabels.py clusters$f/
+	done
+fi
 
 #divide into training and testing data (20/80)
 i=0
@@ -100,13 +117,13 @@ do
 			((j++))
 		fi
 	done
-	../main clusters$f/ clusters$f/combined.pcd
+	$script_dir/../main clusters$f/ clusters$f/combined.pcd
 done
 
 #count score
 if $ignoreZeroOption
 then
-	./countScore.py . -i -c
+	$script_dir/countScore.py . -i -c
 else
-	./countScore.py . -c
+	$script_dir/countScore.py . -c
 fi
