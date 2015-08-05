@@ -83,7 +83,7 @@ PCD::PCD(const char* fileName) {
 		}
 		else if (data_storage == ASCII) {
 			if (sscanf(buf, "%f %f %f %f", &float_data[pointsParsed * 4], &float_data[pointsParsed * 4 + 1],
-				&float_data[pointsParsed * 4 + 2], &float_data[pointsParsed * 4 + 3]) == 4) {
+				&float_data[pointsParsed * 4 + 2], &float_data[pointsParsed * 4 + 3]) >= 3) {
 				pointsParsed++;
 			}
 		}
