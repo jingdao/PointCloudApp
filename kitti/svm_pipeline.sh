@@ -9,6 +9,7 @@ computeDescriptors=false
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=false
+knnOption=true
 kernel=0
 svm_type=0
 
@@ -67,21 +68,27 @@ else
 	cp svm_test_data.txt svm_test_scaled.txt
 fi
 
-#train classifier
-if $parameterOption
+if $knnOption
 then
-	parameters=`$svm_dir/tools/grid.py -gnuplot null -out null -t $kernel svm_train_scaled.txt | tail -1`
-	c_param=`echo $parameters | cut -d' ' -f1`
-	g_param=`echo $parameters | cut -d' ' -f2`
-	echo "SVM Train: c=$c_param g=$g_param ..."
-	$svm_dir/svm-train -c $c_param -g $g_param -s $svm_type -t $kernel -b 1 svm_train_scaled.txt model.txt > /dev/null
+	#use K Nearest Neighbors algorithm
+	$script_dir/knn.py svm_train_scaled.txt svm_test_scaled.txt svm_prediction.txt
 else
-	$svm_dir/svm-train -s $svm_type -t $kernel -b 1 svm_train_scaled.txt model.txt > /dev/null
-fi
+	#train classifier
+	if $parameterOption
+	then
+		parameters=`$svm_dir/tools/grid.py -gnuplot null -out null -t $kernel svm_train_scaled.txt | tail -1`
+		c_param=`echo $parameters | cut -d' ' -f1`
+		g_param=`echo $parameters | cut -d' ' -f2`
+		echo "SVM Train: c=$c_param g=$g_param ..."
+		$svm_dir/svm-train -c $c_param -g $g_param -s $svm_type -t $kernel -b 1 svm_train_scaled.txt model.txt > /dev/null
+	else
+		$svm_dir/svm-train -s $svm_type -t $kernel -b 1 svm_train_scaled.txt model.txt > /dev/null
+	fi
 
-#calculate output
-echo "SVM Test: (Saving to svm_prediction.txt) ..."
-$svm_dir/svm-predict -b 1 svm_test_scaled.txt model.txt svm_prediction.txt
+	#calculate output
+	echo "SVM Test: (Saving to svm_prediction.txt) ..."
+	$svm_dir/svm-predict -b 1 svm_test_scaled.txt model.txt svm_prediction.txt
+fi
 
 #save predicted values to individual directories
 i=0

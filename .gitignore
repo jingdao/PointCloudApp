@@ -23,6 +23,7 @@ kitti/*
 !kitti/plotESF.py
 !kitti/countScore.py
 !kitti/svm_pipeline.sh
+!kitti/knn.py
 !tools
 tools/*
 !tools/esf.cpp
