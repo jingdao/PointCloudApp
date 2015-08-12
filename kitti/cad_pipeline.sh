@@ -1,47 +1,37 @@
 #!/bin/bash
 
-start=07
-end=19
+start=0000000000
+end=0000000000
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
+cad_dir=/home/jd/Documents/PointCloudApp/cloud/cad
 
-computeDescriptors=false
+computeDescriptors=true
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=false
 knnOption=true
 kernel=0
 svm_type=0
-k_parameter=5
+k_parameter=3
 
 #compute descriptors
 if $computeDescriptors
 then
-	for f in `seq -w $start $end`
+	for j in $cad_dir/*-cloud.pcd
 	do
-		for j in clusters$f/*-cloud.pcd
-		do
-			$script_dir/../tools/esf $j $j-esf.pcd
-		done
-
-		#write labels
-		$script_dir/writeLabels.py clusters$f/
+		$script_dir/../tools/esf $j $j-esf.pcd
 	done
+	$script_dir/writeLabels.py $cad_dir
 fi
 
-#divide into training and testing data (20/80)
-i=0
+#divide into training and testing data
 rm svm_train_data.txt svm_test_data.txt
 for f in `seq -w $start $end` 
 do
-	if [ "$((i%5))" -eq 0 ]
-	then
-		cat clusters$f/svmdata.txt >> svm_train_data.txt
-	else
-		cat clusters$f/svmdata.txt >> svm_test_data.txt
-	fi
-	((i++))
+	cat clusters$f/svmdata.txt >> svm_test_data.txt
 done
+cp $cad_dir/svmdata.txt svm_train_data.txt
 
 #filter data
 if $ignoreZeroOption
@@ -94,22 +84,12 @@ fi
 #save predicted values to individual directories
 i=0
 j=1 #first line is label
-arr=()
-for f in `seq -w $start $end`
-do
-	if [ "$((i%5))" -ne 0 ]
-	then
-		arr=(${arr[@]} $f)
-	fi
-	((i++))
-done
-i=0
 while read line
 do
 	predictions[i]="$line"
 	((i++))
 done < svm_prediction.txt
-for f in ${arr[@]}
+for f in `seq -w $start $end`
 do
 	rm clusters$f/prediction.txt
 	numLines=`wc -l < clusters$f/labels.txt`

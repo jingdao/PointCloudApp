@@ -8,14 +8,16 @@ import numpy as np
 inputFile = {'train':'svm_train_scaled.txt', 'test':'svm_test_scaled.txt'}
 outputFile = 'svm_prediction.txt'
 numFeatures = 640
-k = 1
+k = 3
 
 if len(sys.argv) > 1:
-	inputFile['train'] = sys.argv[1]
+	k = int(sys.argv[1])
 if len(sys.argv) > 2:
-	inputFile['test'] = sys.argv[2]
+	inputFile['train'] = sys.argv[2]
 if len(sys.argv) > 3:
-	outputFile = sys.argv[3]
+	inputFile['test'] = sys.argv[3]
+if len(sys.argv) > 4:
+	outputFile = sys.argv[4]
 	
 #import data into matrix format
 features = {'train':[], 'test':[]}
@@ -36,7 +38,7 @@ for dataset in ['train', 'test']:
 #print(labels)
 	
 #train classifier
-neigh = KNeighborsClassifier(k)
+neigh = KNeighborsClassifier(k,p=1)
 neigh.fit(features['train'],labels['train'])
 
 #test classifier
