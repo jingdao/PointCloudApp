@@ -34,3 +34,4 @@ tools/*
 !cloud
 cloud/*
 !cloud/pipeline_single.sh
+!cloud/processPSB.py

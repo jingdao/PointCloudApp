@@ -4,16 +4,16 @@ start=0000000000
 end=0000000000
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
-cad_dir=/home/jd/Documents/PointCloudApp/cloud/cad
+cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb
 
-computeDescriptors=true
+computeDescriptors=false
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=false
 knnOption=true
 kernel=0
 svm_type=0
-k_parameter=3
+k_parameter=1
 
 #compute descriptors
 if $computeDescriptors

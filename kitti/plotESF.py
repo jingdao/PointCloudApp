@@ -2,6 +2,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import sys
+
+args=[]
+if len(sys.argv) > 1:
+	for i in range(1,len(sys.argv)):
+		args.append(int(sys.argv[i]))
 
 x = {}
 y = {}
@@ -33,8 +39,12 @@ for i in range(len(labels)):
 		x[labels[i]].append(j)
 		y[labels[i]].append(float(line[j]))
 
-for key in x:
-	plt.plot(x[key],y[key],'.',label=categories[key],markersize=5)
+if len(args) > 0:
+	for key in args:
+		plt.plot(x[key],y[key],'.',label=categories[key],markersize=5)
+else:
+	for key in x:
+		plt.plot(x[key],y[key],'.',label=categories[key],markersize=5)
 
 plt.legend(loc='upper left')
 plt.axis([0, 640, 0, 0.02])
