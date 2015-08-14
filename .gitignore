@@ -30,6 +30,7 @@ tools/*
 !tools/esf.cpp
 !tools/viz.cpp
 !tools/cluster.cpp
+!tools/correspondence_grouping.cpp
 !tools/CMakeLists.txt
 !cloud
 cloud/*
