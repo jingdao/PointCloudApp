@@ -8,7 +8,7 @@ import numpy as np
 inputFile = {'train':'svm_train_scaled.txt', 'test':'svm_test_scaled.txt'}
 outputFile = 'svm_prediction.txt'
 numFeatures = 640
-k = 3
+k = 1
 
 if len(sys.argv) > 1:
 	k = int(sys.argv[1])
@@ -38,12 +38,18 @@ for dataset in ['train', 'test']:
 #print(labels)
 	
 #train classifier
-neigh = KNeighborsClassifier(k,p=1)
+neigh = KNeighborsClassifier(k,p=1,weights='uniform')
 neigh.fit(features['train'],labels['train'])
 
 #test classifier
 prediction = neigh.predict(features['test'])
 print('Accuracy %.2f%%' % neigh.score(features['test'],labels['test']))
+
+#find neighbors
+neighborFile = open('neighbors.txt','w')
+for i in range(len(features['test'])):
+	dist, match = neigh.kneighbors(features['test'][i])
+	neighborFile.write(str(labels['test'][i])+' '+str(match[0][0])+' '+str(dist[0][0])+'\n')
 
 #output data
 file = open(outputFile,'w')

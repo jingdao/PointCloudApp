@@ -31,6 +31,9 @@ tools/*
 !tools/viz.cpp
 !tools/cluster.cpp
 !tools/correspondence_grouping.cpp
+!tools/vizNeighbors.cpp
+!tools/template_alignment.cpp
+!tools/alignment_prerejective.cpp
 !tools/CMakeLists.txt
 !cloud
 cloud/*

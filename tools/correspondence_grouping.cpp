@@ -202,12 +202,13 @@ main (int argc, char *argv[])
     }
 
     std::cout << "Model resolution:       " << resolution << std::endl;
+  }
     std::cout << "Model sampling size:    " << model_ss_ << std::endl;
     std::cout << "Scene sampling size:    " << scene_ss_ << std::endl;
     std::cout << "LRF support radius:     " << rf_rad_ << std::endl;
-    std::cout << "SHOT descriptor radius: " << descr_rad_ << std::endl;
-    std::cout << "Clustering bin size:    " << cg_size_ << std::endl << std::endl;
-  }
+    std::cout << "Descriptor radius: " << descr_rad_ << std::endl;
+    std::cout << "Clustering bin size:    " << cg_size_ << std::endl;
+	std::cout << "Clustering theshold:    " << cg_thresh_ << std::endl << std::endl;
 
   //
   //  Compute Normals

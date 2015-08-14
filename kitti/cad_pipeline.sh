@@ -1,7 +1,7 @@
 #!/bin/bash
 
 start=0000000000
-end=0000000000
+end=0000000120
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb
@@ -9,11 +9,12 @@ cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb
 computeDescriptors=false
 scaleOption=true
 parameterOption=true
-ignoreZeroOption=false
+ignoreZeroOption=true
 knnOption=true
+savePointCloud=false
 kernel=0
 svm_type=0
-k_parameter=1
+k_parameter=20
 
 #compute descriptors
 if $computeDescriptors
@@ -94,7 +95,7 @@ do
 	rm clusters$f/prediction.txt
 	numLines=`wc -l < clusters$f/labels.txt`
 	read -a labels <<< `cat clusters$f/labels.txt`
-	echo "Updating clusters$f/prediction.txt ..."
+	#echo "Updating clusters$f/prediction.txt ..."
 	for l in ${labels[@]}
 	do
 		if $ignoreZeroOption && [ "$l" -eq 0 ]
@@ -105,7 +106,10 @@ do
 			((j++))
 		fi
 	done
-	$script_dir/../main clusters$f/ clusters$f/combined.pcd
+	if $savePointCloud
+	then
+		$script_dir/../main clusters$f/ clusters$f/combined.pcd
+	fi
 done
 
 #count score
