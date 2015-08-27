@@ -1,52 +1,50 @@
 #!/bin/bash
 
 start=0000000000
-end=0000000010
-velodyne_dir=/home/jd/Downloads/kitti_vision/velodyne_points/data
+end=0000000800
+increment=50
+velodyne_dir=/home/jd/Desktop/kitti2/velodyne_points/data
 svm_dir=/home/jd/Downloads/libsvm-3.20
+cluster_dir=/home/jd/Desktop/kitti2
+compute_cluster=false
+write_labels=false
 
-for i in `seq -w $start $end`
-do
-	mkdir clusters$i
-	rm clusters$i/*-cloud.pcd
-	#read velodyne data and cluster
-	../main $velodyne_dir/$i.bin clusters$i/ &
-done
-wait
-
-for i in `seq -w $start $end`
-do
-	#user input for labels
-	../tools/viz clusters$i > clusters$i/labels.txt
-
-	#compute descriptors
-	for j in clusters$i/*-cloud.pcd
+if $compute_cluster
+then
+	for i in `seq -w $start $increment $end`
 	do
-		../tools/esf $j $j-esf.pcd
+		mkdir $cluster_dir/clusters$i
+		rm $cluster_dir/clusters$i/*-cloud.pcd
+		#read velodyne data and cluster
+		../main $velodyne_dir/$i.bin $cluster_dir/clusters$i/ &
 	done
+	wait
+fi
 
-	#write labels
-	./writeLabels.py clusters$i/
-	#../main clusters$i/ clusters$i/descriptor.pcd
-	#./writeDescriptors.py clusters$i/
+if $write_labels
+then
+	for i in `seq -w $start $increment $end`
+	do
+		echo "Processing clusters$i ..."
 
-done
+		#user input for labels
+		../tools/viz $cluster_dir/clusters$i > $cluster_dir/clusters$i/labels.txt
 
-#scale data
-$svm_dir/svm-scale -l 0 -u 1 -s range.txt clusters$start/svmdata.txt > clusters$start/svmdata-scale.txt
-#train classifier
-$svm_dir/svm-train -t 0 clusters$start/svmdata-scale.txt model.txt
+		#compute descriptors
+		for j in $cluster_dir/clusters$i/*-cloud.pcd
+		do
+			../tools/esf $j $j-esf.pcd
+		done
 
-#calculate output
-for i in `seq -w $start $end`
+		#write labels
+		./writeLabels.py $cluster_dir/clusters$i/
+	done
+fi
+
+#visualize data
+for i in `seq -w $start $increment $end`
 do
-	$svm_dir/svm-scale -r range.txt clusters$i/svmdata.txt > clusters$i/svmdata-scale.txt
-	$svm_dir/svm-predict clusters$i/svmdata-scale.txt model.txt clusters$i/prediction.txt
-	../main clusters$i/ clusters$i/combined.pcd
-done
-
-#view output
-for i in `seq -w $start $end`
-do
-	pcl_viewer clusters$i/combined.pcd
+	cp $cluster_dir/clusters$i/labels.txt $cluster_dir/clusters$i/prediction.txt
+	../main $cluster_dir/clusters$i/ $cluster_dir/clusters$i/combined.pcd
+	pcl_viewer $cluster_dir/clusters$i/combined.pcd
 done

@@ -8,7 +8,16 @@ if len(sys.argv) >=2:
 	inputDir = sys.argv[1]
 else:
 	inputDir = '.'
-	
+
+if len(sys.argv) >=5:
+	start = int(sys.argv[2])
+	inc = int(sys.argv[3])
+	end = int(sys.argv[4])
+else:
+	start = 0
+	inc = 1
+	end = 1
+		
 if "-i" in sys.argv:
 	ignoreZeros = True
 else:
@@ -43,7 +52,8 @@ indexFile.close()
 
 statistics=[]
 
-for d in glob.glob(inputDir+'/*'):
+for i in range(start,end+1,inc):
+	d = inputDir+'/clusters'+str(i).zfill(len(sys.argv[2]))
 	if os.path.isdir(d) and os.path.isfile(d+'/labels.txt') and os.path.isfile(d+'/prediction.txt'):
 		numFiles += 1
 		if len(categories) == 0 and os.path.isfile(d+'/labelCategory.txt'):

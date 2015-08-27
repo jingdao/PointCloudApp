@@ -1,85 +1,103 @@
 #!/bin/bash
 
-start=0000000000
-end=0000000120
+seq_in="0000000000 50 0000000800"
+seq_out="0 1 0"
+kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/drive106
+kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/drive71
+china_dir=/home/jd/Documents/PointCloudApp/cloud/china
+input_dir=$kitti2_dir
+output_dir=$china_dir
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb
 
+useCAD=false
 computeDescriptors=false
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
-knnOption=true
-savePointCloud=false
+knnOption=false
+savePointCloud=true
 kernel=0
 svm_type=0
-k_parameter=20
+k_parameter=1
 
-#compute descriptors
-if $computeDescriptors
+if $useCAD
 then
-	for j in $cad_dir/*-cloud.pcd
-	do
-		$script_dir/../tools/esf $j $j-esf.pcd
-	done
-	$script_dir/writeLabels.py $cad_dir
+	input_dir=$cad_dir
+	#compute descriptors
+	if $computeDescriptors
+	then
+		for j in $cad_dir/*-cloud.pcd
+		do
+			$script_dir/../tools/esf $j $j-esf.pcd
+		done
+		$script_dir/writeLabels.py $cad_dir
+	fi
 fi
 
 #divide into training and testing data
-rm svm_train_data.txt svm_test_data.txt
-for f in `seq -w $start $end` 
+rm $output_dir/svm_train_data.txt $output_dir/svm_test_data.txt
+for f in `seq -w $seq_out` 
 do
-	cat clusters$f/svmdata.txt >> svm_test_data.txt
+	cat $output_dir/clusters$f/svmdata.txt >> $output_dir/svm_test_data.txt
 done
-cp $cad_dir/svmdata.txt svm_train_data.txt
+if $useCAD
+then
+	cp $cad_dir/svmdata.txt $output_dir/svm_train_data.txt
+else
+	for f in `seq -w $seq_in`
+	do
+		cat $input_dir/clusters$f/svmdata.txt >> $output_dir/svm_train_data.txt
+	done
+fi
 
 #filter data
 if $ignoreZeroOption
 then
-	cat svm_train_data.txt | grep -v ^0 > svm_train_filtered.txt
-	mv svm_train_filtered.txt svm_train_data.txt
-	cat svm_test_data.txt | grep -v ^0 > svm_test_filtered.txt
-	mv svm_test_filtered.txt svm_test_data.txt
+	cat $output_dir/svm_train_data.txt | grep -v ^0 > $output_dir/svm_train_filtered.txt
+	mv $output_dir/svm_train_filtered.txt $output_dir/svm_train_data.txt
+	cat $output_dir/svm_test_data.txt | grep -v ^0 > $output_dir/svm_test_filtered.txt
+	mv $output_dir/svm_test_filtered.txt $output_dir/svm_test_data.txt
 fi
 
 #check data
-if ! $svm_dir/tools/checkdata.py svm_train_data.txt || ! $svm_dir/tools/checkdata.py svm_test_data.txt
+if ! $svm_dir/tools/checkdata.py $output_dir/svm_train_data.txt || ! $svm_dir/tools/checkdata.py $output_dir/svm_test_data.txt
 then
 	exit 1
 fi
-echo "Initialize SVM: train=$(wc -l < svm_train_data.txt) test=$(wc -l < svm_test_data.txt) ..."
+echo "Initialize SVM: train=$(wc -l < $output_dir/svm_train_data.txt) test=$(wc -l < $output_dir/svm_test_data.txt) ..."
 
 #scale data
 if $scaleOption
 then
-	$svm_dir/svm-scale -l 0 -u 1 -s range.txt svm_train_data.txt > svm_train_scaled.txt
-	$svm_dir/svm-scale -r range.txt svm_test_data.txt > svm_test_scaled.txt
+	$svm_dir/svm-scale -l 0 -u 1 -s $output_dir/range.txt $output_dir/svm_train_data.txt > $output_dir/svm_train_scaled.txt 2>/dev/null
+	$svm_dir/svm-scale -r $output_dir/range.txt $output_dir/svm_test_data.txt > $output_dir/svm_test_scaled.txt 2>/dev/null
 else
-	cp svm_train_data.txt svm_test_scaled.txt
-	cp svm_test_data.txt svm_test_scaled.txt
+	cp $output_dir/svm_train_data.txt $output_dir/svm_test_scaled.txt
+	cp $output_dir/svm_test_data.txt $output_dir/svm_test_scaled.txt
 fi
 
 if $knnOption
 then
 	#use K Nearest Neighbors algorithm
-	$script_dir/knn.py $k_parameter svm_train_scaled.txt svm_test_scaled.txt svm_prediction.txt
+	$script_dir/knn.py $k_parameter $output_dir/svm_train_scaled.txt $output_dir/svm_test_scaled.txt $output_dir/svm_prediction.txt
 else
 	#train classifier
 	if $parameterOption
 	then
-		parameters=`$svm_dir/tools/grid.py -gnuplot null -out null -t $kernel svm_train_scaled.txt | tail -1`
+		parameters=`$svm_dir/tools/grid.py -gnuplot null -out null -t $kernel $output_dir/svm_train_scaled.txt | tail -1`
 		c_param=`echo $parameters | cut -d' ' -f1`
 		g_param=`echo $parameters | cut -d' ' -f2`
 		echo "SVM Train: c=$c_param g=$g_param ..."
-		$svm_dir/svm-train -c $c_param -g $g_param -s $svm_type -t $kernel -b 1 svm_train_scaled.txt model.txt > /dev/null
+		$svm_dir/svm-train -c $c_param -g $g_param -s $svm_type -t $kernel -b 1 $output_dir/svm_train_scaled.txt $output_dir/model.txt > /dev/null
 	else
-		$svm_dir/svm-train -s $svm_type -t $kernel -b 1 svm_train_scaled.txt model.txt > /dev/null
+		$svm_dir/svm-train -s $svm_type -t $kernel -b 1 $output_dir/svm_train_scaled.txt $output_dir/model.txt > /dev/null
 	fi
 
 	#calculate output
-	echo "SVM Test: (Saving to svm_prediction.txt) ..."
-	$svm_dir/svm-predict -b 1 svm_test_scaled.txt model.txt svm_prediction.txt
+	echo "SVM Test: (Saving to $output_dir/svm_prediction.txt) ..."
+	$svm_dir/svm-predict -b 1 $output_dir/svm_test_scaled.txt $output_dir/model.txt $output_dir/svm_prediction.txt
 fi
 
 #save predicted values to individual directories
@@ -89,33 +107,33 @@ while read line
 do
 	predictions[i]="$line"
 	((i++))
-done < svm_prediction.txt
-for f in `seq -w $start $end`
+done < $output_dir/svm_prediction.txt
+for f in `seq -w $seq_out`
 do
-	rm clusters$f/prediction.txt
-	numLines=`wc -l < clusters$f/labels.txt`
-	read -a labels <<< `cat clusters$f/labels.txt`
-	#echo "Updating clusters$f/prediction.txt ..."
+	rm $output_dir/clusters$f/prediction.txt
+	numLines=`wc -l < $output_dir/clusters$f/labels.txt`
+	read -a labels <<< `cat $output_dir/clusters$f/labels.txt`
+	#echo "Updating $output_dir/clusters$f/prediction.txt ..."
 	for l in ${labels[@]}
 	do
 		if $ignoreZeroOption && [ "$l" -eq 0 ]
 		then
-			echo 0 >> clusters$f/prediction.txt
+			echo 0 >> $output_dir/clusters$f/prediction.txt
 		else
-			echo ${predictions[j]} >> clusters$f/prediction.txt
+			echo ${predictions[j]} >> $output_dir/clusters$f/prediction.txt
 			((j++))
 		fi
 	done
 	if $savePointCloud
 	then
-		$script_dir/../main clusters$f/ clusters$f/combined.pcd
+		$script_dir/../main $output_dir/clusters$f/ $output_dir/clusters$f/combined.pcd
 	fi
 done
 
 #count score
 if $ignoreZeroOption
 then
-	$script_dir/countScore.py . -i -c
+	$script_dir/countScore.py $output_dir $seq_out -i -c
 else
-	$script_dir/countScore.py . -c
+	$script_dir/countScore.py $output_dir $seq_out -c
 fi

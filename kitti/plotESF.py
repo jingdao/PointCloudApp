@@ -11,6 +11,9 @@ if len(sys.argv) > 1:
 
 x = {}
 y = {}
+mean = {}
+stddev = {}
+colors = {0:'white',1:'red',2:'green',3:'blue'}
 
 labels = []
 labelFile = open('labels.txt')
@@ -33,18 +36,22 @@ for i in range(len(labels)):
 		f.readline()
 	line = f.readline().split()
 	if not labels[i] in x:
-		x[labels[i]] = []
+		x[labels[i]] = np.arange(640)
 		y[labels[i]] = []
+	vals=[]
 	for j in range(640):
-		x[labels[i]].append(j)
-		y[labels[i]].append(float(line[j]))
+		vals.append(float(line[j]))
+		y[labels[i]].append(vals)
 
 if len(args) > 0:
-	for key in args:
-		plt.plot(x[key],y[key],'.',label=categories[key],markersize=5)
+	keys = args
 else:
-	for key in x:
-		plt.plot(x[key],y[key],'.',label=categories[key],markersize=5)
+	keys = x.keys()
+for key in keys:
+	mean[key] = np.mean(y[key],axis=0)
+	stddev[key] = np.std(y[key],axis=0)
+	plt.plot(x[key],mean[key],lw=2,label=categories[key],color=colors[key])
+	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
 
 plt.legend(loc='upper left')
 plt.axis([0, 640, 0, 0.02])
