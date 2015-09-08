@@ -13,6 +13,7 @@
 !normal.cpp
 !hashtable.h
 !hashtable.cpp
+!hole_detector.cpp
 !plyheader
 !kitti
 kitti/*
