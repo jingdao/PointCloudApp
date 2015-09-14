@@ -78,7 +78,7 @@ void fileConversion(char* in, char* out) {
 			p->data_storage==PCD::ASCII ? "ascii" : "binary",
 			p->numPoints);
 
-		float segThreshold = 0.1, filterThreshold = 0.5, clusterThreshold = 0.4;
+		float segThreshold = 0.3, filterThreshold = 0.7, clusterThreshold = 0.3;
 		
 		PCD::Plane  coefficients = p->segmentPlane(10000,segThreshold,0.5);
 		printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
@@ -93,7 +93,7 @@ void fileConversion(char* in, char* out) {
 		q->kdtree = new KdTree(q);
 		printf("kdtree depth: %d\n",q->kdtree->kdtreeDepth);
 		std::vector<std::vector<int>> clusters;
-		q->euclideanClusteringKDTree(&clusters,clusterThreshold,100,100000,200);
+		q->euclideanClusteringKDTree(&clusters,clusterThreshold,200,1000000,200);
 		q->writeClustersToPCD(&clusters,out);
 
 		delete p;

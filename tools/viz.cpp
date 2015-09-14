@@ -30,6 +30,12 @@ void keyboardEventOccurred (const pcl::visualization::KeyboardEvent &event, void
 			std::cout << '4' <<std::endl;
 		} else if (event.getKeySym() == "period") {
 			std::cout << '5' <<std::endl;
+		} else if (event.getKeySym() == "slash") {
+			std::cout << '6' <<std::endl;
+		} else if (event.getKeySym() == "semicolon") {
+			std::cout << '7' <<std::endl;
+		} else if (event.getKeySym() == "apostrophe") {
+			std::cout << '8' <<std::endl;
 		}
 //		std::cout << event.getKeySym() << std::endl;
 		idx++;

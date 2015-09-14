@@ -1,12 +1,13 @@
 #!/bin/bash
 
 seq_in="0000000000 50 0000000800"
-seq_out="0 1 0"
-kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/drive106
-kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/drive71
+seq_out="0000000000 5 0000000120"
+kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_29_drive_0071
+kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_26_drive_0106
+kitti3_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_28_drive_0002
 china_dir=/home/jd/Documents/PointCloudApp/cloud/china
-input_dir=$kitti2_dir
-output_dir=$china_dir
+input_dir=$kitti1_dir
+output_dir=$kitti2_dir
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb

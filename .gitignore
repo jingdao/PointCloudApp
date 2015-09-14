@@ -41,3 +41,5 @@ tools/*
 cloud/*
 !cloud/pipeline_single.sh
 !cloud/processPSB.py
+!cloud/raytrace.sh
+

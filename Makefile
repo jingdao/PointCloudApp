@@ -46,7 +46,7 @@ hole_detector: hole_detector.o pcd.o pcd.h kdtree.o kdtree.h descriptor.h descri
 ray_tracing: ray_tracing.o
 	$(CXX) -ggdb3 -o $@ ray_tracing.o
 
-debug: ray_tracing
+debug: main
 
 single: all
 
