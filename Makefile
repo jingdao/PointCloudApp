@@ -40,11 +40,14 @@ sdlViewer: sdlViewer.o sdlViewer.h pcd.o pcd.h kdtree.o kdtree.h
 hashtable: hashtable.h hashtable.o
 	$(CXX) -ggdb3 -o $@ hashtable.o
 
-hole_detector: hole_detector.o pcd.o pcd.h kdtree.o kdtree.h descriptor.h descriptor.o normal.h normal.o hashtable.h hashtable.o
-	$(CXX) -ggdb3 -o $@ hole_detector.o pcd.o kdtree.o descriptor.o normal.o hashtable.o -llapack
+hole_detector: hole_detector.cpp pcd.cpp pcd.h kdtree.cpp kdtree.h descriptor.h descriptor.cpp normal.h normal.cpp hashtable.h hashtable.cpp
+	$(CXX) -std=c++11 -ggdb3 -o $@ hole_detector.cpp pcd.cpp kdtree.cpp descriptor.cpp normal.cpp hashtable.cpp -llapack
 
-ray_tracing: ray_tracing.o
-	$(CXX) -ggdb3 -o $@ ray_tracing.o
+ray_tracing: ray_tracing.cpp
+	$(CXX) -ggdb3 -o $@ ray_tracing.cpp
+
+hole_tracing: hole_tracing.cpp
+	$(CXX) -ggdb3 -o $@ hole_tracing.cpp
 
 debug: main
 

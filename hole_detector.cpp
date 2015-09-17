@@ -3,6 +3,8 @@
 #include <math.h>
 #include "pcd.h"
 
+//http://stackoverflow.com/questions/4279478/largest-circle-inside-a-non-convex-polygon
+
 #define GRID_LENGTH 2048
 
 struct Point {
@@ -274,6 +276,12 @@ float getPolygonDiameter(Polygon *polygon) {
 }
 
 int main(int argc, char* argv[]) {
+
+	if (argc < 3) {
+		printf("./hole_detector input.pcd output.pbm\n");
+		return 1;
+	}
+
 	PCD cloud(argv[1]);
 	printf("Loaded %s (%d points)\n",argv[1],cloud.numPoints);
 
@@ -317,11 +325,14 @@ int main(int argc, char* argv[]) {
 		arr[xcoord + ycoord * xgrid] = true;
 	}
 
+	writeToPBM("pointcloud.pbm",arr,xgrid,ygrid);
 	//smoothing
 	closing(3,arr,arr2,xgrid,ygrid);
+	writeToPBM("smoothed.pbm",arr2,xgrid,ygrid);
 
 	//edge detection, labelling, and polygon formation
 	sobel(arr2,arr,xgrid,ygrid);
+	writeToPBM("edges.pbm",arr,xgrid,ygrid);
 	int numComponents = connected_components(arr2,labels,xgrid,ygrid);
 	std::vector<Polygon> polygons = form_polygons(numComponents,arr,labels,xgrid,ygrid);
 	writeComponentsToPBM(polygons,xgrid,ygrid);
