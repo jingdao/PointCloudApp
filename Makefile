@@ -44,10 +44,10 @@ hole_detector: hole_detector.cpp pcd.cpp pcd.h kdtree.cpp kdtree.h descriptor.h 
 	$(CXX) -std=c++11 -ggdb3 -o $@ hole_detector.cpp pcd.cpp kdtree.cpp descriptor.cpp normal.cpp hashtable.cpp -llapack
 
 ray_tracing: ray_tracing.cpp
-	$(CXX) -ggdb3 -o $@ ray_tracing.cpp
+	$(CXX) -O2 -o $@ ray_tracing.cpp
 
 hole_tracing: hole_tracing.cpp
-	$(CXX) -ggdb3 -o $@ hole_tracing.cpp
+	$(CXX) -O2 -o $@ hole_tracing.cpp
 
 debug: main
 

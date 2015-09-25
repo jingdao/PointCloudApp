@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #define USE_Y_VERTICAL 1
 #define ZERO_THRESHOLD 0.1
+#define CONCAT_RESULT 1
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
 
@@ -198,25 +199,35 @@ int main(int argc, char* argv[]) {
 		planes.push_back(v);
 	}
 
-	double resolution = 0.001; //radians
-	double base_angle = M_PI/3;
+	double resolution = 0.01; //radians
+	double base_angle = M_PI;
 	int numCameras=8;
 	char buffer[128];
-#ifdef USE_Y_VERTICAL
-	double radius = (maxX-minX) > (maxZ-minZ) ? (maxX-minX)/4 : (maxZ-minZ)/4; 
+#if USE_Y_VERTICAL
+	double radius = (maxX-minX) > (maxZ-minZ) ? (maxX-minX) : (maxZ-minZ); 
 #else
-	double radius = (maxX-minX) > (maxY-minY) ? (maxX-minX)/4 : (maxY-minY)/4; 
+	double radius = (maxX-minX) > (maxY-minY) ? (maxX-minX) : (maxY-minY); 
 #endif
-	double noise_sigma = 0.1 * radius;
+	double noise_sigma = 0.03 * radius;
 	double alpha=0;
 	for (int k=0;k<numCameras;k++) {
+		printf("Camera %d\n",k);
+#if !CONCAT_RESULT
 		pointcloud.clear();
-#ifdef USE_Y_VERTICAL
+#endif
+#if USE_Y_VERTICAL
+//		Point rayOrigin = {
+//			centroid.x + radius * sin(alpha) + noise_sigma * rand() / RAND_MAX,
+//			centroid.y + noise_sigma * rand() / RAND_MAX,
+//			centroid.z + radius * cos(alpha) + noise_sigma * rand() / RAND_MAX
+//		};
 		Point rayOrigin = {
-			centroid.x + radius * sin(alpha) + noise_sigma * rand() / RAND_MAX,
-			centroid.y + noise_sigma * rand() / RAND_MAX,
-			centroid.z + radius * cos(alpha) + noise_sigma * rand() / RAND_MAX
+			minX + (maxX-minX)/(numCameras+2)*(k+1),
+			centroid.y,
+			centroid.z
 		};
+		if (k % 2)
+			rayOrigin.z -= fabs(noise_sigma * k * rand() / RAND_MAX);
 #else
 		Point rayOrigin = {
 			centroid.x + radius * cos(alpha) + noise_sigma * rand() / RAND_MAX,
@@ -232,7 +243,7 @@ int main(int argc, char* argv[]) {
 		principalDirection = normalize(principalDirection);
 		for (double theta=-base_angle;theta<base_angle;theta+=resolution) {
 			 for (double phi=-base_angle;phi<base_angle;phi+=resolution) {
-#ifdef USE_Y_VERTICAL
+#if USE_Y_VERTICAL
 				Vector rayDirection = {
 					principalDirection.z * sin(theta) * cos(phi) + principalDirection.x * cos(theta) * cos(phi),
 					sin(phi),
@@ -273,10 +284,16 @@ int main(int argc, char* argv[]) {
 		}
 
 		alpha += 2*M_PI/numCameras;
+#if !CONCAT_RESULT
 		if (pointcloud.size() > 0) {
 			sprintf(buffer,"%s/%d-cloud.pcd",argv[2],k);
 			writeToPCD(buffer,&pointcloud);
 		}
+#endif
 	}
+#if CONCAT_RESULT
+	sprintf(buffer,"%s/combined.pcd",argv[2]);
+	writeToPCD(buffer,&pointcloud);
+#endif
 	return 0;
 }

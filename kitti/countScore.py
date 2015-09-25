@@ -53,8 +53,8 @@ indexFile.close()
 statistics=[]
 
 for i in range(start,end+1,inc):
-#	d = inputDir+'/clusters'+str(i).zfill(len(sys.argv[2]))
-	d = '.'
+	d = inputDir+'/clusters'+str(i).zfill(len(sys.argv[2]))
+#	d = '.'
 	if os.path.isdir(d) and os.path.isfile(d+'/labels.txt') and os.path.isfile(d+'/prediction.txt'):
 		numFiles += 1
 		if len(categories) == 0 and os.path.isfile(d+'/labelCategory.txt'):

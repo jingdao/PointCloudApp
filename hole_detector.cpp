@@ -285,6 +285,12 @@ int main(int argc, char* argv[]) {
 	PCD cloud(argv[1]);
 	printf("Loaded %s (%d points)\n",argv[1],cloud.numPoints);
 
+	PCD::Plane pl = cloud.segmentPlane(10000,10,0.1);
+	std::vector<int> indices;
+	cloud.filterPlane(&indices,pl,10,true);
+	PCD* cloud2 = cloud.extractIndices(&indices);
+	cloud = *cloud2;
+
 	float minX=cloud.float_data[0],maxX=cloud.float_data[0];
 	float minY=cloud.float_data[1],maxY=cloud.float_data[1];
 	for (int i=1;i<cloud.numPoints;i++) {
@@ -327,12 +333,13 @@ int main(int argc, char* argv[]) {
 
 	writeToPBM("pointcloud.pbm",arr,xgrid,ygrid);
 	//smoothing
-	closing(3,arr,arr2,xgrid,ygrid);
+	closing(15,arr,arr2,xgrid,ygrid);
 	writeToPBM("smoothed.pbm",arr2,xgrid,ygrid);
 
 	//edge detection, labelling, and polygon formation
 	sobel(arr2,arr,xgrid,ygrid);
 	writeToPBM("edges.pbm",arr,xgrid,ygrid);
+	return 0;
 	int numComponents = connected_components(arr2,labels,xgrid,ygrid);
 	std::vector<Polygon> polygons = form_polygons(numComponents,arr,labels,xgrid,ygrid);
 	writeComponentsToPBM(polygons,xgrid,ygrid);

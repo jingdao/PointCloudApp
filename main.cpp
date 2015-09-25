@@ -78,7 +78,7 @@ void fileConversion(char* in, char* out) {
 			p->data_storage==PCD::ASCII ? "ascii" : "binary",
 			p->numPoints);
 
-		float segThreshold = 0.3, filterThreshold = 0.7, clusterThreshold = 0.3;
+		float segThreshold = 0.15, filterThreshold = 0.15, clusterThreshold = 0.3;
 		
 		PCD::Plane  coefficients = p->segmentPlane(10000,segThreshold,0.5);
 		printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);

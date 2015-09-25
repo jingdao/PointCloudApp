@@ -758,8 +758,8 @@ PCD* PCD::LoadFromCluster(const char* dir) {
 	strcpy(buffer_c,"prediction.txt");
 	FILE* labelFile = fopen(buffer,"r");
 	std::vector<int> labels;
-	char line[64];
-	while (fgets(line,64,labelFile)) {
+	char line[256];
+	while (fgets(line,256,labelFile)) {
 		labels.push_back(atoi(line));
 	}
 	fclose(labelFile);

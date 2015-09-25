@@ -1,23 +1,29 @@
 #!/bin/bash
 
-seq_in="0000000000 50 0000000800"
-seq_out="0000000000 5 0000000120"
+#seq_in="0000000000 50 0000000800"
+#seq_out="0000000000 5 0000000120"
+seq_in="0000000000 5 0000000120"
+seq_out="$1 1 $1"
 kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_29_drive_0071
 kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_26_drive_0106
 kitti3_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_28_drive_0002
 china_dir=/home/jd/Documents/PointCloudApp/cloud/china
-input_dir=$kitti1_dir
-output_dir=$kitti2_dir
+big_equipment_dir=/home/jd/Documents/PointCloudApp/cloud/big_equipment
+compact_equipment_dir=/home/jd/Documents/PointCloudApp/cloud/compact_equipment
+input_dir=$kitti2_dir
+output_dir=$big_equipment_dir
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
-cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb
+#cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/combined
+cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/slanted
 
-useCAD=false
+useCAD=true
 computeDescriptors=false
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
 knnOption=false
+ldaOption=true
 savePointCloud=true
 kernel=0
 svm_type=0
@@ -83,6 +89,9 @@ if $knnOption
 then
 	#use K Nearest Neighbors algorithm
 	$script_dir/knn.py $k_parameter $output_dir/svm_train_scaled.txt $output_dir/svm_test_scaled.txt $output_dir/svm_prediction.txt
+elif $ldaOption
+then
+	$script_dir/lda.py $output_dir
 else
 	#train classifier
 	if $parameterOption
