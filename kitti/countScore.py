@@ -89,7 +89,7 @@ for i in range(start,end+1,inc):
 		prediction.close()
 
 print "Processed " + str(numFiles) + " files (" + str(numTrials) + " trials)"
-print "%2s %15s %4s %8s %10s %6s" % ("","Category","Num","Accuracy","Precision","Recall")
+print "%2s %15s %4s %9s %8s %10s %6s" % ("","Category","Num","TP","Accuracy","Precision","Recall")
 for i in range(len(categories)):
 	TP = truePositive[i] if i in truePositive else 0
 	FP = falsePositive[i] if i in falsePositive else 0
@@ -98,12 +98,12 @@ for i in range(len(categories)):
 	acc = (numTrials - FP - FN) * 100.0 / numTrials
 	pre = TP * 100.0 / (TP + FP) if (TP + FP) != 0 else float('nan')
 	rec = TP * 100.0 / (TP + FN) if (TP + FN) != 0 else float('nan')
-	print "%2d %15s %4d %8.2f %10.2f %6.2f" % (i,categories[i],num,acc,pre,rec)
+	print "%2d %15s %4d %9d %8.2f %10.2f %6.2f" % (i,categories[i],num,TP,acc,pre,rec)
 
 totalAcc = sum(truePositive.values()) * 100.0 / numTrials
 totalPre = sum(truePositive.values()) * 100.0 / (sum(truePositive.values()) + sum(falsePositive.values()))
 totalRec = sum(truePositive.values()) * 100.0 / (sum(truePositive.values()) + sum(falseNegative.values()))
-print "%2s %15s %4d %8.2f %10.2f %6.2f" % ("","overall",numTrials,totalAcc,totalPre,totalRec)
+print "%2s %15s %4d %9d %8.2f %10.2f %6.2f" % ("","overall",numTrials,sum(truePositive.values()),totalAcc,totalPre,totalRec)
 
 if saveCSV:
 	csvFile = open(inputDir+'/score.csv','w')

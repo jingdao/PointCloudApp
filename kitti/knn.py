@@ -45,7 +45,7 @@ neigh.fit(features['train'],labels['train'])
 
 #test classifier
 prediction = neigh.predict(features['test'])
-print('Accuracy %.2f%%' % neigh.score(features['test'],labels['test']))
+print('Accuracy %.2f%%' % (neigh.score(features['test'],labels['test']) * 100.0))
 
 #find neighbors
 neighborFile = open(outputDir+'/neighbors.txt','w')

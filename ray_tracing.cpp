@@ -4,8 +4,8 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
-#define USE_Y_VERTICAL 0
-#define ZERO_THRESHOLD 0.5
+#define USE_Y_VERTICAL 1
+#define ZERO_THRESHOLD 0.01
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
 
@@ -198,15 +198,15 @@ int main(int argc, char* argv[]) {
 		planes.push_back(v);
 	}
 
-	double resolution = 0.002; //radians
-	int numCameras=8;
+	double resolution = 0.003; //radians
+	int numCameras=16;
 	char buffer[128];
 #ifdef USE_Y_VERTICAL
 	double radius = (maxX-minX) > (maxZ-minZ) ? (maxX-minX)*2 : (maxZ-minZ)*2; 
 #else
 	double radius = (maxX-minX) > (maxY-minY) ? (maxX-minX)*2 : (maxY-minY)*2; 
 #endif
-	double noise_sigma = 0 * radius;
+	double noise_sigma = 0.1 * radius;
 	double alpha=M_PI/8;
 	for (int k=0;k<numCameras;k++) {
 		pointcloud.clear();
