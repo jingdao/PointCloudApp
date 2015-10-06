@@ -24,9 +24,12 @@ kitti/*
 !kitti/writeDescriptors.py
 !kitti/labelCategory.txt
 !kitti/plotESF.py
+!kitti/plotPCA.py
 !kitti/countScore.py
 !kitti/svm_pipeline.sh
 !kitti/knn.py
+!kitti/lda.py
+!kitti/logistic.py
 !kitti/cad_pipeline.sh
 !tools
 tools/*

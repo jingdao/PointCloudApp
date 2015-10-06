@@ -4,10 +4,10 @@
 #seq_in="0000000000 5 0000000120"
 #seq_out="0000000000 50 0000000800"
 #seq_out="0000000000 5 0000000120"
-seq_in="7 1 7"
+#seq_in="7 1 7"
 #seq_in="5 1 5"
-seq_out="6 1 6"
-#seq_out="1 1 1"
+#seq_out="6 1 6"
+seq_out="1 1 1"
 kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_29_drive_0071
 kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_26_drive_0106
 kitti3_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_28_drive_0002
@@ -15,20 +15,21 @@ china_dir=/home/jd/Documents/PointCloudApp/cloud/china
 big_equipment_dir=/home/jd/Documents/PointCloudApp/cloud/big_equipment
 compact_equipment_dir=/home/jd/Documents/PointCloudApp/cloud/compact_equipment
 wheel_track_dir=/home/jd/Documents/PointCloudApp/cloud/wheel_vs_track
-input_dir=$wheel_track_dir
-output_dir=$wheel_track_dir
+input_dir=$big_equipment_dir
+output_dir=$big_equipment_dir
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 #cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/subset
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/slanted
 
-useCAD=false
+useCAD=true
 computeDescriptors=false
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
 knnOption=false
-ldaOption=true
+ldaOption=false
+lrOption=true
 savePointCloud=true
 kernel=0
 svm_type=0
@@ -97,6 +98,9 @@ then
 elif $ldaOption
 then
 	$script_dir/lda.py $output_dir
+elif $lrOption
+then
+	$script_dir/logistic.py $output_dir
 else
 	#train classifier
 	if $parameterOption
