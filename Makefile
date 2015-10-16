@@ -49,6 +49,9 @@ ray_tracing: ray_tracing.cpp
 hole_tracing: hole_tracing.cpp
 	$(CXX) -O2 -o $@ hole_tracing.cpp
 
+semantics: semantics.cpp
+	$(CXX) -ggdb3 -o $@ semantics.cpp -lSDL -lGL -lGLU -llapack -lfreetype -I/usr/include/freetype2
+
 debug: main
 
 single: all

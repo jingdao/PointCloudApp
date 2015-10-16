@@ -16,6 +16,7 @@
 !hole_detector.cpp
 !ray_tracing.cpp
 !hole_tracing.cpp
+!semantics.cpp
 !plyheader
 !kitti
 kitti/*
