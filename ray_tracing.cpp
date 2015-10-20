@@ -4,7 +4,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
-#define USE_Y_VERTICAL 1
+#define USE_Y_VERTICAL 0
 #define ZERO_THRESHOLD 0.01
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
@@ -198,21 +198,21 @@ int main(int argc, char* argv[]) {
 		planes.push_back(v);
 	}
 
-	double resolution = 0.003; //radians
-	int numCameras=16;
+	double resolution = 0.002; //radians
+	int numCameras=8;
 	char buffer[128];
-#ifdef USE_Y_VERTICAL
+#if USE_Y_VERTICAL
 	double radius = (maxX-minX) > (maxZ-minZ) ? (maxX-minX)*2 : (maxZ-minZ)*2; 
 #else
 	double radius = (maxX-minX) > (maxY-minY) ? (maxX-minX)*2 : (maxY-minY)*2; 
 #endif
 	double noise_sigma = 0.1 * radius;
-	double alpha=M_PI/8;
+	double alpha=M_PI/16;
 	for (int k=0;k<numCameras;k++) {
 		pointcloud.clear();
 		//Point rayOrigin = {50,40,40};
 		//Vector principalDirection = {0,-1,0};
-#ifdef USE_Y_VERTICAL
+#if USE_Y_VERTICAL
 		Point rayOrigin = {
 			centroid.x + radius * sin(alpha) + noise_sigma * rand() / RAND_MAX,
 			centroid.y + noise_sigma * rand() / RAND_MAX,
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
 		principalDirection = normalize(principalDirection);
 		for (double theta=-M_PI/4;theta<M_PI/4;theta+=resolution) {
 			 for (double phi=-M_PI/4;phi<M_PI/4;phi+=resolution) {
-#ifdef USE_Y_VERTICAL
+#if USE_Y_VERTICAL
 				Vector rayDirection = {
 					principalDirection.z * sin(theta) * cos(phi) + principalDirection.x * cos(theta) * cos(phi),
 					sin(phi),

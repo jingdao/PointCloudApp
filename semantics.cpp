@@ -305,10 +305,16 @@ void draw() {
 }
 
 int main(int argc,char* argv[]) {
+	if (argc < 2) {
+		printf("./semantics clusterFolder\n");
+		return 1;
+	}
+
 	char buf[128];
 	char categories_buf[256];
 	char desc_buf[1024];
-	FILE* categoryFile = fopen("cloud/big_equipment/labelCategory.txt","r");
+	sprintf(buf,"%s/../labelCategory.txt",argv[1]);
+	FILE* categoryFile = fopen(buf,"r");
 	if (!categoryFile)
 		return 1;
 	char* c = categories_buf;
@@ -320,7 +326,8 @@ int main(int argc,char* argv[]) {
 		*c++ = 0;
 	}
 	fclose(categoryFile);
-	FILE* labelFile = fopen("cloud/big_equipment/clusters0/prediction.txt","r");
+	sprintf(buf,"%s/prediction.txt",argv[1]);
+	FILE* labelFile = fopen(buf,"r");
 	if (!labelFile)
 		return 1;
 	c = buf;
@@ -342,7 +349,7 @@ int main(int argc,char* argv[]) {
 	fclose(labelFile);
 
 	for (int i=0;i<labels.size();i++) {
-		sprintf(buf,"cloud/big_equipment/clusters0/%d-cloud.pcd",i);
+		sprintf(buf,"%s/%d-cloud.pcd",argv[1],i);
 		PCD* c = NewPCD(buf);
 		cloud.push_back(c);
 		if (labels[i] != 0) {

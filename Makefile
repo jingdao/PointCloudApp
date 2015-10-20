@@ -52,6 +52,9 @@ hole_tracing: hole_tracing.cpp
 semantics: semantics.cpp
 	$(CXX) -ggdb3 -o $@ semantics.cpp -lSDL -lGL -lGLU -llapack -lfreetype -I/usr/include/freetype2
 
+rd_desc: rd_desc.cpp
+	$(CXX) -ggdb3 -o $@ $<
+
 debug: main
 
 single: all

@@ -20,7 +20,7 @@ output_dir=$big_equipment_dir
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 #cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/subset
-cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/slanted
+cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/hd
 
 useCAD=true
 computeDescriptors=false
@@ -30,7 +30,7 @@ ignoreZeroOption=true
 knnOption=false
 ldaOption=false
 lrOption=true
-savePointCloud=true
+savePointCloud=false
 kernel=0
 svm_type=0
 k_parameter=1

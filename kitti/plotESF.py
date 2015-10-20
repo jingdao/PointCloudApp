@@ -32,15 +32,16 @@ if svmdata_file:
 	file = open(svmdata_file)
 	for line in file:
 		tokens = line.split()
+		num_bins = len(tokens) - 1
 		l = int(tokens[0])
 		labels.append(l)
-		f = [0] * 640
+		f = [0] * num_bins
 		for i in range(1,len(tokens)):
 			ind = int(tokens[i].split(':')[0])
 			val = float(tokens[i].split(':')[1])
 			f[ind - 1] = val
 		if not l in x:
-			x[l] = np.arange(640)
+			x[l] = np.arange(num_bins)
 			y[l] = []
 		y[l].append(f)
 else:
@@ -52,14 +53,17 @@ else:
 
 	for i in range(len(labels)):
 		f = open(str(i)+"-cloud.pcd-esf.pcd")
-		for j in range(11):
+		for j in range(5):
+			f.readline()
+		num_bins = int(f.readline().split()[1])
+		for j in range(5):
 			f.readline()
 		line = f.readline().split()
 		if not labels[i] in x:
-			x[labels[i]] = np.arange(640)
+			x[labels[i]] = np.arange(num_bins)
 			y[labels[i]] = []
 		vals=[]
-		for j in range(640):
+		for j in range(num_bins):
 			vals.append(float(line[j]))
 		y[labels[i]].append(vals)
 
