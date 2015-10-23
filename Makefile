@@ -55,6 +55,9 @@ semantics: semantics.cpp
 rd_desc: rd_desc.cpp
 	$(CXX) -ggdb3 -o $@ $<
 
+hpcd: hpcd.cpp
+	$(CXX) -O3 -Wall -o $@ $<
+
 debug: main
 
 single: all

@@ -36,6 +36,7 @@ for dataset in ['train', 'test']:
 			f[ind - 1] = val
 		features[dataset].append(f)
 
+classes = set(labels['train'])
 #print(features)
 #print(labels)
 	
@@ -45,6 +46,7 @@ neigh.fit(features['train'],labels['train'])
 
 #test classifier
 prediction = neigh.predict(features['test'])
+proba = neigh.predict_proba(features['test'])
 print('Accuracy %.2f%%' % (neigh.score(features['test'],labels['test']) * 100.0))
 
 #find neighbors
@@ -56,6 +58,13 @@ neighborFile.close()
 
 #output data
 file = open(outputFile,'w')
-file.write('labels\n')
-for l in prediction:
-	file.write(str(l)+'\n')
+file.write('labels ')
+for c in classes:
+	file.write(str(c)+' ')
+file.write('\n')
+for i in range(len(prediction)):
+	l = prediction[i]
+	file.write(str(l)+' ')
+	for p in proba[i]:
+		file.write(str(p)+' ')
+	file.write('\n')

@@ -38,6 +38,8 @@ int main (int argc, char** argv)
 	if (argc >= 7) maxCluster = atoi(argv[6]);
 	if (argc >= 8) maxClusters = atoi(argv[7]);
 	if (argc >= 9) clusterTolerance = strtod(argv[8],NULL);
+	printf("segmentation: %d iter %f thres %f ratio\n",segIterations,segThreshold,segRatio);
+	printf("clustering: %d min %d max %d total %f thres\n",minCluster,maxCluster,maxClusters,clusterTolerance);
 
 	// Create the segmentation object for the planar model and set all the parameters
 	pcl::SACSegmentation<pcl::PointXYZRGB> seg;
@@ -73,6 +75,7 @@ int main (int argc, char** argv)
 		// Get the points associated with the planar surface
 		extract.filter (*cloud_plane);
 		std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
+		std::cout << coefficients->values[0] << " " << coefficients->values[1] << " " << coefficients->values[2] << " " << coefficients->values[3] << std::endl;
 
 		// Remove the planar inliers, extract the rest
 		extract.setNegative (true);

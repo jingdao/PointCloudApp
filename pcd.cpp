@@ -975,7 +975,8 @@ PCD::Plane PCD::segmentPlane(int iter,float threshold,float inlierRatio) {
 	Plane bestPlane = {0,0,0,0};
 	int maxInliers = 0;
 	int optimumInliers = inlierRatio * numPoints;
-	for (int i=0;i<iter;i++) {
+	int i;
+	for (i=0;i<iter;i++) {
 		//Pick 3 points
 		int p0 = rand() % numPoints;
 		int p1 = rand() % numPoints;
@@ -1014,6 +1015,7 @@ PCD::Plane PCD::segmentPlane(int iter,float threshold,float inlierRatio) {
 		}
 //		printf("Current plane: %f %f %f %f %d\n",currentPlane.a,currentPlane.b,currentPlane.c,currentPlane.d,numInliers);
 	}
+	printf("RANSAC: %d iters\n",i);
 	return bestPlane;
 }
 

@@ -5,6 +5,7 @@
 #include <float.h>
 #include <stdlib.h>
 #define USE_Y_VERTICAL 0
+#define RADIAL_SAMPLING 1
 #define ZERO_THRESHOLD 0.01
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
@@ -162,7 +163,7 @@ bool triangleContains(std::vector<Point> *vertices,Triangle tri,Plane plane,Poin
 
 int main(int argc, char* argv[]) {
 	if (argc < 3) {
-		printf("./ray_tracing input.ply outputFolder\n");
+		printf("Usage: ./ray_tracing input.ply outputFolder\n");
 		return 1;
 	}
 
@@ -198,39 +199,38 @@ int main(int argc, char* argv[]) {
 		planes.push_back(v);
 	}
 
-	double resolution = 0.002; //radians
-	int numCameras=8;
+	double resolution = 0.001; //radians
+	int numCameras=16;
 	char buffer[128];
 #if USE_Y_VERTICAL
 	double radius = (maxX-minX) > (maxZ-minZ) ? (maxX-minX)*2 : (maxZ-minZ)*2; 
 #else
 	double radius = (maxX-minX) > (maxY-minY) ? (maxX-minX)*2 : (maxY-minY)*2; 
 #endif
-	double noise_sigma = 0.1 * radius;
-	double alpha=M_PI/16;
+	double noise_sigma = 0 * radius;
+	double alpha=M_PI/2/numCameras;
 	for (int k=0;k<numCameras;k++) {
 		pointcloud.clear();
-		//Point rayOrigin = {50,40,40};
-		//Vector principalDirection = {0,-1,0};
 #if USE_Y_VERTICAL
-		Point rayOrigin = {
+		Point cameraOrigin = {
 			centroid.x + radius * sin(alpha) + noise_sigma * rand() / RAND_MAX,
 			centroid.y + noise_sigma * rand() / RAND_MAX,
 			centroid.z + radius * cos(alpha) + noise_sigma * rand() / RAND_MAX
 		};
 #else
-		Point rayOrigin = {
+		Point cameraOrigin = {
 			centroid.x + radius * cos(alpha) + noise_sigma * rand() / RAND_MAX,
 			centroid.y + radius * sin(alpha) + noise_sigma * rand() / RAND_MAX,
 			centroid.z + noise_sigma * rand() / RAND_MAX
 		};
 #endif
 		Vector principalDirection = {
-			centroid.x - rayOrigin.x,
-			centroid.y - rayOrigin.y,
-			centroid.z - rayOrigin.z
+			centroid.x - cameraOrigin.x,
+			centroid.y - cameraOrigin.y,
+			centroid.z - cameraOrigin.z
 		};
 		principalDirection = normalize(principalDirection);
+#if RADIAL_SAMPLING
 		for (double theta=-M_PI/4;theta<M_PI/4;theta+=resolution) {
 			 for (double phi=-M_PI/4;phi<M_PI/4;phi+=resolution) {
 #if USE_Y_VERTICAL
@@ -245,6 +245,25 @@ int main(int argc, char* argv[]) {
 					principalDirection.x * sin(theta) * cos(phi) + principalDirection.y * cos(theta) * cos(phi),
 					sin(phi)
 				};
+#endif
+				Point rayOrigin = cameraOrigin;
+#else
+		for (double theta=minZ;theta<maxZ;theta+=(maxZ-minZ)*resolution) {
+			for (double phi=-radius/4;phi<radius/4;phi+=(radius/2)*resolution) {
+				Vector rayDirection = principalDirection;
+#if USE_Y_VERTICAL
+				Point rayOrigin = {
+					cameraOrigin.x + phi * principalDirection.z,
+					theta,
+					cameraOrigin.z - phi * principalDirection.x
+				};
+#else
+				Point rayOrigin = {
+					cameraOrigin.x + phi * principalDirection.y,
+					cameraOrigin.y - phi * principalDirection.x,
+					theta
+				};
+#endif
 #endif
 				bool isValid = false;
 				Point closestPoint;
