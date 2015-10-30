@@ -44,6 +44,10 @@ tools/*
 !tools/template_alignment.cpp
 !tools/alignment_prerejective.cpp
 !tools/CMakeLists.txt
+!benchmark
+benchmark/*
+!benchmark/test_hpcd.sh
+!benchmark/test_cluster.sh
 !cloud
 cloud/*
 !cloud/pipeline_single.sh

@@ -7,6 +7,11 @@
 #define BASE_HASH_CONSTANT 0.618033988
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
+#define PROFILE 1
+
+#if PROFILE
+	struct timespec start,tic,toc;
+#endif
 
 struct HPoint {
 	int x,y,z;
@@ -73,7 +78,7 @@ inline int HPCD_find(HPCD* cloud,int x,int y,int z) {
 	return -1;
 }
 
-HPCD* HPCD_Init(char* inFile,int numGrid,Box* box) {
+HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data) {
 	HPCD* res = new HPCD;
 	FILE* f = fopen(inFile,"r");
 	if (!f) {
@@ -82,7 +87,6 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box) {
 	}
 	char buf[256];
 	PCD_data_storage data_storage = NONE;
-	std::vector<float> float_data;
 	int totalPoints = 0;
 	while (fgets(buf, 256, f)) {
 		if (sscanf(buf, "POINTS %d", &totalPoints) == 1) {
@@ -109,9 +113,9 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box) {
 			if (x >= res->minX && x <= res->maxX &&
 			    y >= res->minY && y <= res->maxY &&
 			    z >= res->minZ && z <= res->maxZ) {
-				float_data.push_back(x);
-				float_data.push_back(y);
-				float_data.push_back(z);
+				float_data->push_back(x);
+				float_data->push_back(y);
+				float_data->push_back(z);
 			}
 		}
 	} else {
@@ -133,13 +137,18 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box) {
 			else if (y > res->maxY) res->maxY = y;
 			if (z < res->minZ) res->minZ = z;
 			else if (z > res->maxZ) res->maxZ = z;
-			float_data.push_back(x);
-			float_data.push_back(y);
-			float_data.push_back(z);
+			float_data->push_back(x);
+			float_data->push_back(y);
+			float_data->push_back(z);
 		}
 	}
 	fclose(f);
-	totalPoints = float_data.size() / 3;
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&toc);
+	printf("Profile (Initialization): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+	tic = toc;
+#endif
+	totalPoints = float_data->size() / 3;
 	float minDist = res->maxX - res->minX;
 	if (res->maxY - res->minY < minDist)
 		minDist = res->maxY - res->minY;
@@ -154,9 +163,9 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box) {
 	int i,j=0,k;
 	res->numPoints = 0;
 	for (i=0;i<totalPoints;i++) {
-		float x = float_data[j++];
-		float y = float_data[j++];
-		float z = float_data[j++];
+		float x = (*float_data)[j++];
+		float y = (*float_data)[j++];
+		float z = (*float_data)[j++];
 		int xi = (int) ((x-res->minX)/res->leafSize);
 		int yi = (int) ((y-res->minY)/res->leafSize);
 		int zi = (int) ((z-res->minZ)/res->leafSize);
@@ -344,7 +353,7 @@ void segmentPlane(HPCD* cloud, int iter,int threshold,float inlierRatio) {
 			cloud->numPoints--;
 		}
 	}
-	printf("RANSAC: %d points %d iters\n",cloud->numPoints,i);
+	printf("RANSAC: %d points %d iters (%d,%d,%d,%d)\n",cloud->numPoints,i,bestPlane.a,bestPlane.b,bestPlane.c,bestPlane.d);
 	delete[] pointdata;
 }
 
@@ -360,16 +369,47 @@ void euclideanClustering(HPCD* cloud, std::vector<std::vector<int> > *indices,in
 			Q.pop_back();
 			P.push_back(p);
 			HPoint* h = cloud->data[p];
-			for (int dx=-distance;dx<=distance;dx++) {
-				for (int dy=-distance;dy<=distance;dy++) {
-					for (int dz=-distance;dz<=distance;dz++) {
-						int j = HPCD_find(cloud,h->x+dx,h->y+dy,h->z+dz);
-						if (j>=0 && ! visited[j]) {
-							Q.push_back(j);
-							visited[j] = true;
-						}
-					} 
-				}
+//			for (int dx=-distance;dx<=distance;dx++) {
+//				for (int dy=-distance;dy<=distance;dy++) {
+//					for (int dz=-distance;dz<=distance;dz++) {
+//						int j = HPCD_find(cloud,h->x+dx,h->y+dy,h->z+dz);
+//						if (j>=0 && ! visited[j]) {
+//							Q.push_back(j);
+//							visited[j] = true;
+//						}
+//					} 
+//				}
+//			}
+			int j;
+			j = HPCD_find(cloud,h->x-1,h->y,h->z);
+			if (j>=0 && ! visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x+1,h->y,h->z);
+			if (j>=0 && ! visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y-1,h->z);
+			if (j>=0 && ! visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y+1,h->z);
+			if (j>=0 && ! visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y,h->z-1);
+			if (j>=0 && ! visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y,h->z+1);
+			if (j>=0 && ! visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
 			}
 		}
 		if (P.size() >= minSize && P.size() <= maxSize)
@@ -395,35 +435,57 @@ void writeParam(char* filename,HPCD* cloud,int segment,int cluster,int mincluste
 
 int main(int argc,char* argv[]) {
 	if (argc < 3) {
-		printf("Usage: ./hpcd in.pcd out/");
+		printf("Usage: ./hpcd in.pcd out/\n");
 		return 1;
 	}
 	
 	char* inFile = argv[1];
 	char* outDir = argv[2];
-	int segmentThreshold = 4;
-	int clusterThreshold = 4;
-	int mincluster = 500;
-	int maxcluster = 500000;
+	int segmentThreshold = 1;
+	int clusterThreshold = 1;
+	int mincluster = 50;
+	int maxcluster = 100000;
 	Box box = {140,-224,165,240,-137,178};
+	std::vector<float> float_data;
 	srand(time(NULL));
 
-	HPCD* cloud = HPCD_Init(inFile,260,&box);
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&start);
+	tic = start;
+#endif
+	HPCD* cloud = HPCD_Init(inFile,32,&box,&float_data);
 	if (!cloud)
 		return 1;
 
 	char buf[128];
 	sprintf(buf,"%s/filtered.pcd",outDir);
 	HPCD_resize(cloud);
-	HPCD_write(buf,cloud);
-	sprintf(buf,"%s/param.txt",outDir);
-	writeParam(buf,cloud,segmentThreshold,clusterThreshold,mincluster,maxcluster);
-	segmentPlane(cloud,1000,segmentThreshold,0.5);
-	sprintf(buf,"%s/original.pcd",outDir);
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&toc);
+	printf("Profile (Downsampling): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+	tic = toc;
+#endif
+//	HPCD_write(buf,cloud);
+//	sprintf(buf,"%s/param.txt",outDir);
+//	writeParam(buf,cloud,segmentThreshold,clusterThreshold,mincluster,maxcluster);
+	segmentPlane(cloud,10000,segmentThreshold,0.3);
 	HPCD_resize(cloud);
-	HPCD_write(buf,cloud);
+	segmentPlane(cloud,10000,segmentThreshold,0.3);
+	HPCD_resize(cloud);
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&toc);
+	printf("Profile (Ground segmentation): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+	tic = toc;
+#endif
+//	sprintf(buf,"%s/original.pcd",outDir);
+//	HPCD_write(buf,cloud);
 	std::vector<std::vector<int> > indices;
 	euclideanClustering(cloud,&indices,clusterThreshold,mincluster,maxcluster,200);
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&toc);
+	printf("Profile (Clustering): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+	printf("Profile (Total): %f\n",toc.tv_sec - start.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * start.tv_nsec);
+#endif
 	HPCD_writeClusters(outDir,cloud,&indices);
 
 	for (int i=0;i<cloud->maxSize;i++)
