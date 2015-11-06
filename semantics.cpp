@@ -42,9 +42,11 @@ int gChoice[] = {150,0,255,0,255,0,255};
 int bChoice[] = {150,0,0,255,0,255,255};
 std::vector<int> labels;
 std::vector<PCD*> cloud;
+PCD* outlier = NULL;
 std::vector< std::vector<float> > box;
 std::vector<char*> categories;
 std::vector<char*> descriptions;
+std::vector<float> score;
 FT_Library ft;
 FT_Face face;
 FT_GlyphSlot glyph;
@@ -272,10 +274,18 @@ void draw() {
 	glPointSize(1.0);
 	glBegin(GL_POINTS);
 	for (int i=0;i<cloud.size();i++) {
-		glColor3ub(rChoice[labels[i]],gChoice[labels[i]],bChoice[labels[i]]);
+		if (!labels[i] || score[i] < 0.5)
+			glColor3ub(150,150,150);
+		else
+			glColor3ub(rChoice[labels[i]],gChoice[labels[i]],bChoice[labels[i]]);
 		for (int n = 0; n < cloud[i]->numPoints; n++){
 			glVertex3d(cloud[i]->float_data[n*4],cloud[i]->float_data[n*4+1],cloud[i]->float_data[n*4+2]);
 		}
+	}
+	if (outlier) {
+		glColor3ub(150,150,150);
+		for (int n=0;n<outlier->numPoints;n++)
+			glVertex3d(outlier->float_data[n*4],outlier->float_data[n*4+1],outlier->float_data[n*4+2]);
 	}
 	glEnd();
 
@@ -342,6 +352,7 @@ int main(int argc,char* argv[]) {
 				max_score = score > max_score ? score : max_score;
 			}
 			int k = sprintf(d,"%s:%.0f%%",categories[l],max_score*100);
+			score.push_back(max_score);
 			descriptions.push_back(d);
 			d += k + 1;
 		}
@@ -374,6 +385,8 @@ int main(int argc,char* argv[]) {
 	}
 	printf("Loaded %lu point clouds\n",cloud.size());
 	printf("Loaded %lu bounding boxes\n",box.size());
+	sprintf(buf,"%s/outlier.pcd",argv[1]);
+	outlier = NewPCD(buf);
 
 	FT_Init_FreeType(&ft);
 	FT_New_Face(ft,"/usr/share/fonts/truetype/freefont/FreeSans.ttf",0,&face);

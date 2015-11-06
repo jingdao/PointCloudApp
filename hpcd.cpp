@@ -8,7 +8,7 @@
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
 #define PROFILE 0
-#define USE_XY_CLUSTERING 0
+#define USE_LEAF 1
 
 #if PROFILE
 	struct timespec start,tic,toc;
@@ -36,11 +36,21 @@ struct Plane {
 	int a,b,c,d;
 };
 
+struct Cluster {
+	int index,size;
+};
+
 enum PCD_data_storage {
 	ASCII,
 	BINARY,
 	NONE
 };
+
+int compareCluster(const void* v1,const void* v2) {
+	Cluster* c1 = (Cluster*) v1;
+	Cluster* c2 = (Cluster*) v2;
+	return c2->size - c1->size;
+}
 
 inline int baseHash(int size, int hashKey) {
 	return (int)(size*((BASE_HASH_CONSTANT*hashKey) - (int)(BASE_HASH_CONSTANT*hashKey)));
@@ -62,15 +72,6 @@ inline int getIntKey(int x,int y,int z) {
 	else return h;
 }
 
-inline int getIntKeyXY(int x,int y) {
-	int h = STRING_HASH_CONSTANT;
-	h = (h << 5) + h + x;
-	h = (h << 5) + h + y;
-	if (h < 0)
-		return -h;
-	else return h;
-}
-
 inline int HPCD_find(HPCD* cloud,int x,int y,int z) {
 	int ikey = getIntKey(x,y,z);
 	int j = baseHash(cloud->maxSize,ikey);
@@ -80,24 +81,6 @@ inline int HPCD_find(HPCD* cloud,int x,int y,int z) {
 		if (!h) {
 			return -1;
 		} else if (h->x == x && h->y == y && h->z == z){
-			return j;
-		} else {
-			j += step;
-			j %= cloud->maxSize;
-		}
-	}
-	return -1;
-}
-
-inline int HPCD_find2D(HPCD* cloud,int x,int y) {
-	int ikey = getIntKeyXY(x,y);
-	int j = baseHash(cloud->maxSize,ikey);
-	int step = stepHash(cloud->maxSize,ikey);
-	for (int k=0;k<cloud->maxSize;k++) {
-		HPoint* h = cloud->data[j];
-		if (!h) {
-			return -1;
-		} else if (h->x == x && h->y == y){
 			return j;
 		} else {
 			j += step;
@@ -224,48 +207,6 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 	return res;
 }
 
-HPCD* HPCD_Init2D(HPCD* cloud) {
-	HPCD* res = new HPCD;
-	res->numGrid = cloud->numGrid;
-	res->leafSize = cloud->leafSize;
-	res->maxSize = cloud->maxSize;
-	res->minX = cloud->minX;
-	res->maxX = cloud->maxX;
-	res->minY = cloud->minY;
-	res->maxY = cloud->maxY;
-	res->minZ = 0;
-	res->maxZ = 0;
-	res->data = new HPoint*[res->maxSize]();
-	res->numPoints = 0;
-	for (int i=0;i<cloud->maxSize;i++) {
-		HPoint* h = cloud->data[i];
-		if (!h)
-			continue;
-		int ikey = getIntKeyXY(h->x,h->y);
-		int key = baseHash(res->maxSize,ikey);
-		int step = stepHash(res->maxSize,ikey);
-		for(int k = 0;k < res->maxSize;k++) {
-			HPoint* p = res->data[key];
-			if (!p) {
-				HPoint* q = new HPoint;
-				q->x = h->x;
-				q->y = h->y;
-				q->z = 0;
-				q->label = -1;
-				res->data[key] = q;
-				res->numPoints++;
-				break;
-			} else if (p->x == h->x && p->y == h->y) {
-				break;
-			} else {
-				key += step;
-				key %= res->maxSize;
-			}
-		}
-	}
-	return res;
-}
-
 void HPCD_resize(HPCD* res) { //to save memory
 	int newSize = 8; 
 	while (newSize < 4 * res->numPoints)
@@ -303,38 +244,6 @@ void HPCD_delete(HPCD* cloud) {
 	delete cloud;
 }
 
-void writeBoundingBox(char* filename,Box bb) {
-	if (!filename)
-		return;
-	FILE* f = fopen(filename, "w");
-	if (!f) {
-		printf("Cannot write to file: %s\n", filename);
-		return;
-	}
-	fprintf(f,"v %f %f %f\n",bb.minX,bb.minY,bb.minZ);
-	fprintf(f,"v %f %f %f\n",bb.maxX,bb.minY,bb.minZ);
-	fprintf(f,"v %f %f %f\n",bb.minX,bb.maxY,bb.minZ);
-	fprintf(f,"v %f %f %f\n",bb.maxX,bb.maxY,bb.minZ);
-	fprintf(f,"v %f %f %f\n",bb.minX,bb.minY,bb.maxZ);
-	fprintf(f,"v %f %f %f\n",bb.maxX,bb.minY,bb.maxZ);
-	fprintf(f,"v %f %f %f\n",bb.minX,bb.maxY,bb.maxZ);
-	fprintf(f,"v %f %f %f\n",bb.maxX,bb.maxY,bb.maxZ);
-	fprintf(f,
-	"l 1 2\n"
-	"l 1 3\n"
-	"l 2 4\n"
-	"l 3 4\n"
-	"l 1 5\n"
-	"l 2 6\n"
-	"l 3 7\n"
-	"l 4 8\n"
-	"l 5 6\n"
-	"l 5 7\n"
-	"l 6 8\n"
-	"l 7 8\n");
-	fclose(f);
-}
-
 void HPCD_write(char* filename,HPCD* pointcloud) {
 	FILE* f = fopen(filename, "w");
 	if (!f) {
@@ -365,7 +274,7 @@ void HPCD_write(char* filename,HPCD* pointcloud) {
 	printf("Wrote %d points to %s\n",pointcloud->numPoints,filename);
 }
 
-void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<std::vector<int> > *indices) {
+void HPCD_writeLeafClusters(char* outDir,HPCD* cloud, std::vector<std::vector<int> > *indices) {
 	char buffer[128];
 	for (size_t i=0;i<indices->size();i++) {
 		std::vector<int> idx = (*indices)[i];
@@ -397,7 +306,7 @@ void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<std::vector<int> >
 	printf("Saved %lu point clouds to %s\n",indices->size(),outDir);
 }
 
-void HPCD_writeXYClusters(char* outDir,HPCD* cloud, std::vector<float> *float_data,int numClusters) {
+void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<float> *float_data,int numClusters) {
 	char buffer[128];
 	size_t numPoints = float_data->size()/3;
 	std::vector<float> *clusters = new std::vector<float>[numClusters];
@@ -409,7 +318,8 @@ void HPCD_writeXYClusters(char* outDir,HPCD* cloud, std::vector<float> *float_da
 		float z = (*float_data)[j++];
 		int xi = (int) ((x-cloud->minX)/cloud->leafSize);
 		int yi = (int) ((y-cloud->minY)/cloud->leafSize);
-		int ikey = getIntKeyXY(xi,yi);
+		int zi = (int) ((z-cloud->minZ)/cloud->leafSize);
+		int ikey = getIntKey(xi,yi,zi);
 		int key = baseHash(cloud->maxSize,ikey);
 		int step = stepHash(cloud->maxSize,ikey);
 		int label = -1;
@@ -417,8 +327,9 @@ void HPCD_writeXYClusters(char* outDir,HPCD* cloud, std::vector<float> *float_da
 			HPoint* h = cloud->data[key];
 			if (!h)
 				break;
-			else if (h->x == xi && h->y == yi) {
+			else if (h->x == xi && h->y == yi && h->z == zi) {
 				label = h->label;
+				break;
 			} else {
 				key += step;
 				key %= cloud->maxSize;
@@ -553,9 +464,9 @@ void segmentPlane(HPCD* cloud, int iter,float inlierRatio) {
 	delete[] pointdata;
 }
 
-void euclideanClustering(HPCD* cloud, std::vector<std::vector<int> > *indices,size_t minSize,size_t maxSize,size_t maxClusters) {
+void euclideanLeafClustering(HPCD* cloud, std::vector<std::vector<int> > *indices,size_t minSize,size_t maxSize,size_t maxClusters) {
 	bool* visited = new bool[cloud->maxSize]();
-	for (int i=0;i<cloud->numPoints;i++) {
+	for (int i=0;i<cloud->maxSize;i++) {
 		if (!cloud->data[i] || visited[i]) continue;
 		std::vector<int> P,Q;
 		Q.push_back(i);
@@ -616,58 +527,84 @@ void euclideanClustering(HPCD* cloud, std::vector<std::vector<int> > *indices,si
 	delete[] visited;
 }
 
-int XYClusteringBB(HPCD* cloud) {
+void euclideanClustering(HPCD* cloud,int totalClusters) {
 	bool* visited = new bool[cloud->maxSize]();
+	std::vector<Cluster> clusters;
 	int numClusters = 0;
-	for (int i=0;i<cloud->numPoints;i++) {
+	for (int i=0;i<cloud->maxSize;i++) {
 		HPoint* seed = cloud->data[i];
 		if (!seed || visited[i]) continue;
+		Cluster c = {numClusters,0};
 		std::vector<int> Q;
 		Q.push_back(i);
 		visited[i] = true;
-		int clusterSize = 0;
 		while (Q.size() > 0) {
 			int p = Q[Q.size()-1];
 			Q.pop_back();
 			HPoint* h = cloud->data[p];
 			h->label = numClusters;
-			clusterSize++;
+			c.size++;
 			int j;
-			j = HPCD_find2D(cloud,h->x-1,h->y);
+			j = HPCD_find(cloud,h->x-1,h->y,h->z);
 			if (j>=0 && !visited[j]) {
 				Q.push_back(j);
 				visited[j] = true;
 			}
-			j = HPCD_find2D(cloud,h->x+1,h->y);
+			j = HPCD_find(cloud,h->x+1,h->y,h->z);
 			if (j>=0 && !visited[j]) {
 				Q.push_back(j);
 				visited[j] = true;
 			}
-			j = HPCD_find2D(cloud,h->x,h->y-1);
+			j = HPCD_find(cloud,h->x,h->y-1,h->z);
 			if (j>=0 && !visited[j]) {
 				Q.push_back(j);
 				visited[j] = true;
 			}
-			j = HPCD_find2D(cloud,h->x,h->y+1);
+			j = HPCD_find(cloud,h->x,h->y+1,h->z);
+			if (j>=0 && !visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y,h->z-1);
+			if (j>=0 && !visited[j]) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y,h->z+1);
 			if (j>=0 && !visited[j]) {
 				Q.push_back(j);
 				visited[j] = true;
 			}
 		}
-//		printf("Cluster %d: %d\n",numClusters,clusterSize);
+//		printf("Cluster %d: %d\n",numClusters,c.size);
+		clusters.push_back(c);
 		numClusters++;
 	}
+	Cluster *sortedClusters = new Cluster[numClusters];
+	memcpy(sortedClusters,clusters.data(),numClusters*sizeof(Cluster));
+	qsort(sortedClusters,numClusters,sizeof(Cluster),compareCluster);
+	int *idx = new int[numClusters];
+	for (int i=0;i<numClusters;i++)
+		idx[i] = -1;
+	for (int i=0;i<totalClusters && i<numClusters;i++)
+		idx[sortedClusters[i].index] = i;
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* h = cloud->data[i];
+		if (h)
+			h->label = idx[h->label];
+	}
+	delete[] idx;
 	delete[] visited;
-	return numClusters;
+	delete[] sortedClusters;
 }
 
-void writeParam(char* filename,HPCD* cloud,int segment,int cluster,int mincluster,int maxcluster) {
+void writeParam(char* filename,HPCD* cloud,float segment,float cluster,int mincluster,int maxcluster) {
 	FILE* f = fopen(filename,"w");
 	if (!f)
 		return;
 	fprintf(f,"leaf: %f %f %f\n",cloud->leafSize,cloud->leafSize,cloud->leafSize);
-	fprintf(f,"segmentation: %f\n",segment*cloud->leafSize);
-	fprintf(f,"clustering: %d-%d %f\n",mincluster,maxcluster,cluster*cloud->leafSize);
+	fprintf(f,"segmentation: %f\n",segment);
+	fprintf(f,"clustering: %d-%d %f\n",mincluster,maxcluster,cluster);
 	fprintf(f,"x range: %f %f\n",cloud->minX,cloud->maxX);
 	fprintf(f,"y range: %f %f\n",cloud->minY,cloud->maxY);
 	fprintf(f,"z range: %f %f\n",cloud->minZ,cloud->maxZ);
@@ -685,13 +622,13 @@ int main(int argc,char* argv[]) {
 	Box box = {140,-224,164,240,-137,178};
 	std::vector<float> float_data;
 //	srand(time(NULL));
-	srand(1);
+	srand(8);
 
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&start);
 	tic = start;
 #endif
-	HPCD* cloud = HPCD_Init(inFile,32,&box,&float_data);
+	HPCD* cloud = HPCD_Init(inFile,43,&box,&float_data);
 	if (!cloud)
 		return 1;
 
@@ -719,23 +656,22 @@ int main(int argc,char* argv[]) {
 	sprintf(buf,"%s/original.pcd",outDir);
 	HPCD_write(buf,cloud);
 #endif
-#if USE_XY_CLUSTERING
-	HPCD* cloud_2d = HPCD_Init2D(cloud);
-	int numClusters = XYClusteringBB(cloud_2d);
-#else
+#if USE_LEAF
 	std::vector<std::vector<int> > indices;
-	euclideanClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
+	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
+#else
+	int numClusters = 50;
+	euclideanClustering(cloud,numClusters);
 #endif
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Clustering): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
 	printf("Profile (Total): %f\n",toc.tv_sec - start.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * start.tv_nsec);
 #endif
-#if USE_XY_CLUSTERING
-	HPCD_writeXYClusters(outDir,cloud_2d,&float_data,numClusters);
-	HPCD_delete(cloud_2d);
+#if USE_LEAF
+	HPCD_writeLeafClusters(outDir,cloud,&indices);
 #else
-	HPCD_writeClusters(outDir,cloud,&indices);
+	HPCD_writeClusters(outDir,cloud,&float_data,numClusters);
 #endif
 	HPCD_delete(cloud);
 
