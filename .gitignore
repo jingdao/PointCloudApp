@@ -33,6 +33,7 @@ kitti/*
 !kitti/knn.py
 !kitti/lda.py
 !kitti/logistic.py
+!kitti/bayes.py
 !kitti/cad_pipeline.sh
 !tools
 tools/*
@@ -48,6 +49,8 @@ tools/*
 benchmark/*
 !benchmark/test_hpcd.sh
 !benchmark/test_cluster.sh
+!benchmark/test_hpcd_kitti.sh
+!benchmark/test_cluster_kitti.sh
 !cloud
 cloud/*
 !cloud/pipeline_single.sh

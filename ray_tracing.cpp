@@ -5,7 +5,7 @@
 #include <float.h>
 #include <stdlib.h>
 #define USE_Y_VERTICAL 0
-#define RADIAL_SAMPLING 1
+#define RADIAL_SAMPLING 0
 #define ZERO_THRESHOLD 0.01
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
 		planes.push_back(v);
 	}
 
-	double resolution = 0.001; //radians
+	double resolution = 0.005; //radians
 	int numCameras=16;
 	char buffer[128];
 #if USE_Y_VERTICAL
@@ -210,6 +210,7 @@ int main(int argc, char* argv[]) {
 	double noise_sigma = 0 * radius;
 	double alpha=M_PI/2/numCameras;
 	for (int k=0;k<numCameras;k++) {
+		double fov = M_PI/8 + M_PI/4*rand()/RAND_MAX;
 		pointcloud.clear();
 #if USE_Y_VERTICAL
 		Point cameraOrigin = {
@@ -231,8 +232,8 @@ int main(int argc, char* argv[]) {
 		};
 		principalDirection = normalize(principalDirection);
 #if RADIAL_SAMPLING
-		for (double theta=-M_PI/4;theta<M_PI/4;theta+=resolution) {
-			 for (double phi=-M_PI/4;phi<M_PI/4;phi+=resolution) {
+		for (double theta=-fov/2;theta<fov/2;theta+=resolution) {
+			 for (double phi=-fov/2;phi<fov/2;phi+=resolution) {
 #if USE_Y_VERTICAL
 				Vector rayDirection = {
 					principalDirection.z * sin(theta) * cos(phi) + principalDirection.x * cos(theta) * cos(phi),
@@ -248,16 +249,19 @@ int main(int argc, char* argv[]) {
 #endif
 				Point rayOrigin = cameraOrigin;
 #else
-		for (double theta=minZ;theta<maxZ;theta+=(maxZ-minZ)*resolution) {
-			for (double phi=-radius/4;phi<radius/4;phi+=(radius/2)*resolution) {
-				Vector rayDirection = principalDirection;
 #if USE_Y_VERTICAL
+		for (double theta=minY;theta<maxY;theta+=(maxY-minY)*resolution) {
+			for (double phi=-radius*fov/M_PI/2;phi<radius*fov/M_PI/2;phi+=(radius*fov/M_PI)*resolution) {
+				Vector rayDirection = principalDirection;
 				Point rayOrigin = {
 					cameraOrigin.x + phi * principalDirection.z,
 					theta,
 					cameraOrigin.z - phi * principalDirection.x
 				};
 #else
+		for (double theta=minZ;theta<maxZ;theta+=(maxZ-minZ)*resolution) {
+			for (double phi=-radius*fov/M_PI/2;phi<radius*fov/M_PI/2;phi+=(radius*fov/M_PI)*resolution) {
+				Vector rayDirection = principalDirection;
 				Point rayOrigin = {
 					cameraOrigin.x + phi * principalDirection.y,
 					cameraOrigin.y - phi * principalDirection.x,

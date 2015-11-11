@@ -26,6 +26,7 @@ int main (int argc, char** argv)
 	reader.read (argv[1], *cloud);
 	std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered =cloud;
+	pcl::PCDWriter writer;
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Initialization): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
@@ -70,9 +71,11 @@ int main (int argc, char** argv)
 		vg.filter(*cloud);
 		cloud_filtered = cloud;
 #if PROFILE
-	clock_gettime(CLOCK_MONOTONIC,&toc);
-	printf("Profile (Filtering): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
-	tic = toc;
+		clock_gettime(CLOCK_MONOTONIC,&toc);
+		printf("Profile (Filtering): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+		tic = toc;
+#else
+		writer.write<pcl::PointXYZRGB> ("filtered.pcd", *cloud_filtered, false); //*
 #endif
 	}
 	printf("segmentation: %d iter %f thres %f ratio\n",segIterations,segThreshold,segRatio);
@@ -83,7 +86,6 @@ int main (int argc, char** argv)
 	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ());
-	pcl::PCDWriter writer;
 	seg.setOptimizeCoefficients (true);
 	seg.setModelType (pcl::SACMODEL_PLANE);
 	seg.setMethodType (pcl::SAC_RANSAC);
@@ -123,10 +125,11 @@ int main (int argc, char** argv)
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Ground segmentation): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
 	tic = toc;
+#else
+	writer.write<pcl::PointXYZRGB> ("original.pcd", *cloud_filtered, false); //*
 #endif
 
 	std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
-//	writer.write<pcl::PointXYZRGB> ("original.pcd", *cloud_filtered, false); //*
 	// Creating the KdTree object for the search method of the extraction
 	pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
 	tree->setInputCloud (cloud_filtered);

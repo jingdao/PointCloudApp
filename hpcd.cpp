@@ -7,8 +7,8 @@
 #define BASE_HASH_CONSTANT 0.618033988
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
-#define PROFILE 0
-#define USE_LEAF 1
+#define PROFILE 1
+#define USE_LEAF 0
 
 #if PROFILE
 	struct timespec start,tic,toc;
@@ -142,6 +142,128 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 			if (!fgets(buf,256,f))
 				break;
 			if (!sscanf(buf, "%f %f %f",&x,&y,&z) == 3)
+				break;
+			if (x < res->minX) res->minX = x;
+			else if (x > res->maxX) res->maxX = x;
+			if (y < res->minY) res->minY = y;
+			else if (y > res->maxY) res->maxY = y;
+			if (z < res->minZ) res->minZ = z;
+			else if (z > res->maxZ) res->maxZ = z;
+			float_data->push_back(x);
+			float_data->push_back(y);
+			float_data->push_back(z);
+		}
+	}
+	fclose(f);
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&toc);
+	printf("Profile (Initialization): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+	tic = toc;
+#endif
+	totalPoints = float_data->size() / 3;
+	float minDist = res->maxX - res->minX;
+	if (res->maxY - res->minY < minDist)
+		minDist = res->maxY - res->minY;
+	if (res->maxZ - res->minZ < minDist)
+		minDist = res->maxZ - res->minZ;
+	res->numGrid = numGrid;
+	res->leafSize = minDist / res->numGrid;
+	res->maxSize = 8; 
+	while (res->maxSize < 4 * totalPoints)
+		res->maxSize *= 2;
+	res->data = new HPoint*[res->maxSize]();
+	int i,j=0,k;
+	res->numPoints = 0;
+	for (i=0;i<totalPoints;i++) {
+		float x = (*float_data)[j++];
+		float y = (*float_data)[j++];
+		float z = (*float_data)[j++];
+		int xi = (int) ((x-res->minX)/res->leafSize);
+		int yi = (int) ((y-res->minY)/res->leafSize);
+		int zi = (int) ((z-res->minZ)/res->leafSize);
+		int ikey = getIntKey(xi,yi,zi);
+		int key = baseHash(res->maxSize,ikey);
+		int step = stepHash(res->maxSize,ikey);
+		for (k = 0; k < res->maxSize; k++) {
+			HPoint* h = res->data[key];
+			if (!h) {
+				HPoint* p = new HPoint;
+				p->x = xi;
+				p->y = yi;
+				p->z = zi;
+				res->data[key] = p;
+				res->numPoints++;
+				break;
+			} else if (h->x == xi && h->y == yi && h->z == zi){
+				break;
+			} else {
+				key += step;
+				key %= res->maxSize;
+			}
+		}
+	}
+	printf("Processed point cloud (numPoints:%d maxSize:%d leafSize:%f)\n",res->numPoints,res->maxSize,res->leafSize);
+	printf("Bounding box: x:(%.2f %.2f) y:(%.2f %.2f) z:(%.2f %.2f)\n",res->minX,res->maxX,res->minY,res->maxY,res->minZ,res->maxZ);
+	return res;
+}
+
+HPCD* HPCD_Init_KITTI(char* inFile,int numGrid,Box* box,std::vector<float> *float_data) {
+	HPCD* res = new HPCD;
+	FILE* f = fopen(inFile,"r");
+	if (!f) {
+		printf("%s not found\n",inFile);
+		return NULL;
+	}
+	fseek (f, 0, SEEK_END);   // non-portable
+	int size_bytes=ftell(f);
+	int totalPoints = size_bytes / 4 / sizeof(float);
+	fseek(f,0,SEEK_SET);
+	if (box) {
+		res->minX = box->minX;
+		res->maxX = box->maxX;
+		res->minY = box->minY;
+		res->maxY = box->maxY;
+		res->minZ = box->minZ;
+		res->maxZ = box->maxZ;
+		float x,y,z,r;
+		for (int i=0;i<totalPoints;i++) {
+			if (fread(&x,sizeof(float),1,f) != 1)
+				break;
+			if (fread(&y,sizeof(float),1,f) != 1)
+				break;
+			if (fread(&z,sizeof(float),1,f) != 1)
+				break;
+			if (fread(&r,sizeof(float),1,f) != 1)
+				break;
+			if (x >= res->minX && x <= res->maxX &&
+			    y >= res->minY && y <= res->maxY &&
+			    z >= res->minZ && z <= res->maxZ) {
+				float_data->push_back(x);
+				float_data->push_back(y);
+				float_data->push_back(z);
+			}
+		}
+	} else {
+		float x,y,z,r;
+		if (fread(&x,sizeof(float),1,f) != 1)
+			return NULL;
+		if (fread(&y,sizeof(float),1,f) != 1)
+			return NULL;
+		if (fread(&z,sizeof(float),1,f) != 1)
+			return NULL;
+		if (fread(&r,sizeof(float),1,f) != 1)
+			return NULL;
+		res->minX = res->maxX = x;
+		res->minY = res->maxY = y;
+		res->minZ = res->maxZ = z;
+		for (int i=1;i<totalPoints;i++) {
+			if (fread(&x,sizeof(float),1,f) != 1)
+				break;
+			if (fread(&y,sizeof(float),1,f) != 1)
+				break;
+			if (fread(&z,sizeof(float),1,f) != 1)
+				break;
+			if (fread(&r,sizeof(float),1,f) != 1)
 				break;
 			if (x < res->minX) res->minX = x;
 			else if (x > res->maxX) res->maxX = x;
@@ -613,23 +735,43 @@ void writeParam(char* filename,HPCD* cloud,float segment,float cluster,int mincl
 
 int main(int argc,char* argv[]) {
 	if (argc < 3) {
-		printf("Usage: ./hpcd in.pcd out/\n");
+		printf("Usage: ./hpcd in.pcd out/ [-n numGrid] [-b x1 y1 z1 x2 y2 z2]\n");
 		return 1;
 	}
 	
 	char* inFile = argv[1];
 	char* outDir = argv[2];
-	Box box = {140,-224,164,240,-137,178};
+//	Box box = {140,-224,164,240,-137,178};
+//	Box box = {-513,-212,167,-452,-147,174};
+	Box *box = NULL;
+	int numGrid = 100;
 	std::vector<float> float_data;
 //	srand(time(NULL));
-	srand(8);
+	srand(0);
+	for (int i=3;i<argc;i++) {
+		if (strcmp(argv[i],"-n")==0 && i+1<argc)
+			numGrid = atoi(argv[++i]);
+		else if (strcmp(argv[i],"-b")==0 && i+6<argc) {
+			box = new Box;
+			box->minX = strtod(argv[++i],NULL);
+			box->minY = strtod(argv[++i],NULL);
+			box->minZ = strtod(argv[++i],NULL);
+			box->maxX = strtod(argv[++i],NULL);
+			box->maxY = strtod(argv[++i],NULL);
+			box->maxZ = strtod(argv[++i],NULL);
+		}
+	}
 
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&start);
 	tic = start;
 #endif
-	HPCD* cloud = HPCD_Init(inFile,43,&box,&float_data);
-	if (!cloud)
+	HPCD* cloud = NULL;
+	if (strcmp(inFile+strlen(inFile)-4,".pcd")==0)
+		cloud = HPCD_Init(inFile,numGrid,box,&float_data);
+	else if (strcmp(inFile+strlen(inFile)-4,".bin")==0)
+		cloud = HPCD_Init_KITTI(inFile,numGrid,box,&float_data);
+	if (!cloud || cloud->numPoints <= 0)
 		return 1;
 
 	char buf[128];
@@ -674,6 +816,8 @@ int main(int argc,char* argv[]) {
 	HPCD_writeClusters(outDir,cloud,&float_data,numClusters);
 #endif
 	HPCD_delete(cloud);
+	if (box)
+		delete box;
 
 	return 0;
 }
