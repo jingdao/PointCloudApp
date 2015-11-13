@@ -10,6 +10,8 @@
 #include "lapack.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#define IGNORE_ZEROS 1
+#define INCLUDE_OUTLIERS 0
 
 //double cameraX=0,cameraY=-5,cameraZ=3;
 double cameraX=245,cameraY=-223,cameraZ=201;
@@ -273,19 +275,19 @@ void draw() {
 
 	glPointSize(1.0);
 	glBegin(GL_POINTS);
+	if (outlier) {
+		glColor3ub(150,150,150);
+		for (int n=0;n<outlier->numPoints;n++)
+			glVertex3d(outlier->float_data[n*4],outlier->float_data[n*4+1],outlier->float_data[n*4+2]);
+	}
 	for (int i=0;i<cloud.size();i++) {
-		if (!labels[i] || score[i] < 0.5)
+		if (!labels[i])
 			glColor3ub(150,150,150);
 		else
 			glColor3ub(rChoice[labels[i]],gChoice[labels[i]],bChoice[labels[i]]);
 		for (int n = 0; n < cloud[i]->numPoints; n++){
 			glVertex3d(cloud[i]->float_data[n*4],cloud[i]->float_data[n*4+1],cloud[i]->float_data[n*4+2]);
 		}
-	}
-	if (outlier) {
-		glColor3ub(150,150,150);
-		for (int n=0;n<outlier->numPoints;n++)
-			glVertex3d(outlier->float_data[n*4],outlier->float_data[n*4+1],outlier->float_data[n*4+2]);
 	}
 	glEnd();
 
@@ -345,7 +347,11 @@ int main(int argc,char* argv[]) {
 	while (fgets(buf,128,labelFile)) {
 		int l = strtol(buf,&c,10);
 		labels.push_back(l);
-		if (l) {
+#if IGNORE_ZEROS
+		if (l != 0) {
+#else
+		if (l >= 0) {
+#endif
 			double max_score = 0;
 			while (*c != '\n') {
 				double score = strtod(c,&c);
@@ -363,7 +369,11 @@ int main(int argc,char* argv[]) {
 		sprintf(buf,"%s/%d-cloud.pcd",argv[1],i);
 		PCD* c = NewPCD(buf);
 		cloud.push_back(c);
+#if IGNORE_ZEROS
 		if (labels[i] != 0) {
+#else
+		if (labels[i] >= 0) {
+#endif
 			std::vector<float> currentBox;
 			double lambda[3], v[9];
 			double principalLengths[3], principalAxes[9], bbCenter[3];
@@ -385,8 +395,10 @@ int main(int argc,char* argv[]) {
 	}
 	printf("Loaded %lu point clouds\n",cloud.size());
 	printf("Loaded %lu bounding boxes\n",box.size());
+#if INCLUDE_OUTLIERS
 	sprintf(buf,"%s/outlier.pcd",argv[1]);
 	outlier = NewPCD(buf);
+#endif
 
 	FT_Init_FreeType(&ft);
 	FT_New_Face(ft,"/usr/share/fonts/truetype/freefont/FreeSans.ttf",0,&face);

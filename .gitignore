@@ -35,6 +35,7 @@ kitti/*
 !kitti/logistic.py
 !kitti/bayes.py
 !kitti/cad_pipeline.sh
+!kitti/svc.py
 !tools
 tools/*
 !tools/esf.cpp

@@ -7,7 +7,9 @@
 #seq_in="7 1 7"
 #seq_in="5 1 5"
 #seq_out="6 1 6"
-seq_out="1 1 1"
+#seq_out="8 1 8"
+#seq_out="1 1 1"
+seq_out="2 1 2"
 kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_29_drive_0071
 kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_26_drive_0106
 kitti3_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_28_drive_0002
@@ -15,25 +17,27 @@ china_dir=/home/jd/Documents/PointCloudApp/cloud/china
 big_equipment_dir=/home/jd/Documents/PointCloudApp/cloud/big_equipment
 compact_equipment_dir=/home/jd/Documents/PointCloudApp/cloud/compact_equipment
 wheel_track_dir=/home/jd/Documents/PointCloudApp/cloud/wheel_vs_track
-input_dir=$big_equipment_dir
-output_dir=$big_equipment_dir
+input_dir=$kitti2_dir
+output_dir=$compact_equipment_dir
 svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 #cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/subset
-cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/hd
+cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/mixed
 
 useCAD=true
 computeDescriptors=false
 scaleOption=true
 parameterOption=true
-ignoreZeroOption=true
+ignoreZeroOption=false
 knnOption=false
 ldaOption=false
-lrOption=true
+lrOption=false
+bayesOption=false
+svcOption=true
 savePointCloud=false
 kernel=0
 svm_type=0
-k_parameter=1
+k_parameter=10
 
 if $useCAD
 then
@@ -101,6 +105,12 @@ then
 elif $lrOption
 then
 	$script_dir/logistic.py $output_dir
+elif $bayesOption
+then
+	$script_dir/bayes.py $output_dir
+elif $svcOption
+then
+	$script_dir/svc.py $output_dir
 else
 	#train classifier
 	if $parameterOption
