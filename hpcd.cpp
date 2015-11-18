@@ -7,7 +7,7 @@
 #define BASE_HASH_CONSTANT 0.618033988
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
-#define PROFILE 1
+#define PROFILE 0
 #define USE_LEAF 0
 
 #if PROFILE
@@ -788,8 +788,8 @@ int main(int argc,char* argv[]) {
 #endif
 	segmentPlane(cloud,10000,0.5);
 	HPCD_resize(cloud);
-	segmentPlane(cloud,10000,0.5);
-	HPCD_resize(cloud);
+//	segmentPlane(cloud,10000,0.5);
+//	HPCD_resize(cloud);
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Ground segmentation): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
@@ -802,7 +802,7 @@ int main(int argc,char* argv[]) {
 	std::vector<std::vector<int> > indices;
 	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
 #else
-	int numClusters = 50;
+	int numClusters = 100;
 	euclideanClustering(cloud,numClusters);
 #endif
 #if PROFILE
