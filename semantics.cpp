@@ -11,13 +11,13 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #define IGNORE_ZEROS 1
-#define INCLUDE_OUTLIERS 0
+#define INCLUDE_OUTLIERS 1
 
 //double cameraX=0,cameraY=-5,cameraZ=3;
 double cameraX=245,cameraY=-223,cameraZ=201;
 double centerX=0,centerY=0,centerZ=0;
 double upX=0,upY=0,upZ=1;
-const int labelWidth=120,labelHeight=25,fontpixels=14;
+const int labelWidth=120,labelHeight=25,fontpixels=11;
 int mouseIndex = 0;
 int previousX,previousY;
 double scrollSpeed = 1.01;
@@ -39,9 +39,9 @@ struct Quaternion{
 	float k;
 };
 
-int rChoice[] = {150,255,0,0,255,255,0};
+int rChoice[] = {150,255,0,0,255,100,0};
 int gChoice[] = {150,0,255,0,255,0,255};
-int bChoice[] = {150,0,0,255,0,255,255};
+int bChoice[] = {150,0,0,255,0,100,255};
 std::vector<int> labels;
 std::vector<PCD*> cloud;
 PCD* outlier = NULL;

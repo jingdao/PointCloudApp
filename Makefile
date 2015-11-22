@@ -58,6 +58,9 @@ rd_desc: rd_desc.cpp
 hpcd: hpcd.cpp
 	$(CXX) -O3 -Wall -o $@ $<
 
+scan_eval: scan_eval.cpp
+	$(CXX) -ggdb3 -Wall -o $@ $<
+
 debug: main
 
 single: all

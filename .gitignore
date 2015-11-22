@@ -19,6 +19,7 @@
 !semantics.cpp
 !rd_desc.cpp
 !hpcd.cpp
+!scan_eval.cpp
 !plyheader
 !kitti
 kitti/*
