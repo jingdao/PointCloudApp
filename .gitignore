@@ -58,4 +58,7 @@ cloud/*
 !cloud/pipeline_single.sh
 !cloud/processPSB.py
 !cloud/raytrace.sh
-
+!cloud/concatpcd.py
+!cloud/translatepcd.py
+!cloud/scalepcd.py
+!cloud/downsamplepcd.py
