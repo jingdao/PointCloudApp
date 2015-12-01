@@ -39,9 +39,9 @@ struct Quaternion{
 	float k;
 };
 
-int rChoice[] = {150,255,0,0,255,100,0};
+int rChoice[] = {150,255,0,0,255,255,0};
 int gChoice[] = {150,0,255,0,255,0,255};
-int bChoice[] = {150,0,0,255,0,100,255};
+int bChoice[] = {150,0,0,255,0,255,255};
 std::vector<int> labels;
 std::vector<PCD*> cloud;
 PCD* outlier = NULL;
@@ -235,8 +235,8 @@ void render_text(const char *text, unsigned char *data) {
 		for (int i=0;i<glyph->bitmap.rows;i++) {
 			unsigned char *dest = data + ((glyph->bitmap_top - i + fontpixels/2) * labelWidth + x + glyph->bitmap_left)* 3;
 			for (int j=0;j<glyph->bitmap.width;j++) {
-				//memset(dest,*src,3); // draw in grayscale
-				*dest = *src; //draw in red
+				memset(dest,*src,3); // draw in grayscale
+				//*dest = *src; //draw in red
 				src++;
 				dest+=3;
 			}
@@ -276,7 +276,7 @@ void draw() {
 	glPointSize(1.0);
 	glBegin(GL_POINTS);
 	if (outlier) {
-		glColor3ub(150,150,150);
+		glColor3ub(50,50,50);
 		for (int n=0;n<outlier->numPoints;n++)
 			glVertex3d(outlier->float_data[n*4],outlier->float_data[n*4+1],outlier->float_data[n*4+2]);
 	}

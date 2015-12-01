@@ -9,7 +9,9 @@ x = {}
 y = {}
 mean = {}
 stddev = {}
-colors = {0:'white',1:'red',2:'green',3:'blue',4:'yellow',5:'purple',6:'orange'}
+#colors = {0:'white',1:'red',2:'green',3:'blue',4:'yellow',5:'purple',6:'orange'}
+colors = {0:'#ffffff',1:'#ff0000',2:'#00ff00',3:'#0000ff',4:'#ffff00',5:'#ff00ff',6:'#00ffff'}
+markers = {0:'.',1:'o',2:'*',3:'+',4:'s',5:'x'}
 svmdata_file = None
 args=[]
 if len(sys.argv) > 1:
@@ -75,8 +77,9 @@ else:
 for key in keys:
 	mean[key] = np.mean(y[key],axis=0)
 	stddev[key] = np.std(y[key],axis=0)
-	plt.plot(x[key],mean[key],lw=2,label=categories[key],color=colors[key])
-	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
+	plt.plot(x[key],mean[key],lw=0,label=categories[key],color='black',marker=markers[key])
+#	plt.plot(x[key],mean[key],lw=2,label=categories[key],color=colors[key])
+#	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
 
 plt.legend(loc='upper left')
 plt.axis([0, 640, 0, 0.02])
