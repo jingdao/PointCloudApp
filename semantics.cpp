@@ -17,7 +17,7 @@
 double cameraX=245,cameraY=-223,cameraZ=201;
 double centerX=0,centerY=0,centerZ=0;
 double upX=0,upY=0,upZ=1;
-const int labelWidth=120,labelHeight=25,fontpixels=11;
+const int labelWidth=180,labelHeight=30,fontpixels=20,grayLevel=50;
 int mouseIndex = 0;
 int previousX,previousY;
 double scrollSpeed = 1.01;
@@ -39,9 +39,9 @@ struct Quaternion{
 	float k;
 };
 
-int rChoice[] = {150,255,0,0,255,255,0};
-int gChoice[] = {150,0,255,0,255,0,255};
-int bChoice[] = {150,0,0,255,0,255,255};
+int rChoice[] = {grayLevel,255,0,0,255,255,0};
+int gChoice[] = {grayLevel,0,255,0,255,0,255};
+int bChoice[] = {grayLevel,0,0,255,0,255,255};
 std::vector<int> labels;
 std::vector<PCD*> cloud;
 PCD* outlier = NULL;
@@ -276,7 +276,7 @@ void draw() {
 	glPointSize(1.0);
 	glBegin(GL_POINTS);
 	if (outlier) {
-		glColor3ub(50,50,50);
+		glColor3ub(grayLevel,grayLevel,grayLevel);
 		for (int n=0;n<outlier->numPoints;n++)
 			glVertex3d(outlier->float_data[n*4],outlier->float_data[n*4+1],outlier->float_data[n*4+2]);
 	}

@@ -77,7 +77,7 @@ else:
 for key in keys:
 	mean[key] = np.mean(y[key],axis=0)
 	stddev[key] = np.std(y[key],axis=0)
-	plt.plot(x[key],mean[key],lw=0,label=categories[key],color='black',marker=markers[key])
+	plt.plot(x[key],mean[key],lw=0,label=categories[key],color=colors[key],marker=markers[key])
 #	plt.plot(x[key],mean[key],lw=2,label=categories[key],color=colors[key])
 #	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
 
