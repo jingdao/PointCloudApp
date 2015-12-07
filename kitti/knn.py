@@ -41,13 +41,41 @@ classes = set(labels['train'])
 #print(labels)
 	
 #train classifier
-neigh = KNeighborsClassifier(k,p=1,weights='uniform')
+neigh = KNeighborsClassifier(k,p=1,weights='distance')
 neigh.fit(features['train'],labels['train'])
 
 #test classifier
 prediction = neigh.predict(features['test'])
 proba = neigh.predict_proba(features['test'])
+#for i in range(len(prediction)):
+#	q = sorted(proba[i],reverse=True)
+#	if q[0] - q[1] < 0.3:
+#		prediction[i] = 0
 print('Accuracy %.2f%%' % (neigh.score(features['test'],labels['test']) * 100.0))
+#prediction=[]
+#proba=[]
+#dist, match = neigh.kneighbors(features['test'])
+#numCategories = max(labels['train'])
+#for i in range(len(labels['test'])):
+#	score = {}
+#	count = {}
+#	p = []
+#	for j in range(len(match[i])):
+#		l = labels['train'][match[i][j]]
+#		if l in score:
+#			score[l] += 1/dist[i][j]
+#			count[l] += 1
+#		else:
+#			score[l] = 1/dist[i][j]
+#			count[l] = 1
+#	for key in range(numCategories):
+#		if key in score:
+#			p.append(score[key] / count[key])
+#		else:
+#			p.append(0)
+#	p = np.array(p)
+#	proba.append(p / np.sum(p))
+#	prediction.append(np.argmax(p)+1)
 
 #find neighbors
 neighborFile = open(outputDir+'/neighbors.txt','w')
