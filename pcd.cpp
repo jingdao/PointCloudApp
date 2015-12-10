@@ -280,6 +280,7 @@ void PCD::writeClustersToPCD(std::vector<std::vector<int>> *indices,const char* 
 		std::vector<int> currentIndices = (*indices)[i];
 		PCD* subcloud = extractIndices(&currentIndices);
 		subcloud->writeToPCD(buffer);
+		subcloud->writeToOBJ(dir,i);
 		delete subcloud;
 	}
 }
@@ -333,12 +334,20 @@ void PCD::writeToOFF(const char* filename) {
 	fclose(f);
 }
 
-void PCD::writeToOBJ(const char* filename) {
+void PCD::writeToOBJ(const char* dir,size_t index) {
+	char filename[256];
+	snprintf(filename,256,"%s/%lu.obj",dir,index);
 	if (!filename)
 		return;
 	FILE* f = fopen(filename, "w");
 	if (!f) {
 		printf("Cannot write to file: %s\n", filename);
+		return;
+	}
+	snprintf(filename,256,"%s/bounding_box.txt",dir);
+	FILE* aggregate = fopen(filename,"a");
+	if (!aggregate) {
+		printf("Cannot write to file: %s\n", aggregate);
 		return;
 	}
 
@@ -360,6 +369,10 @@ void PCD::writeToOBJ(const char* filename) {
 		}
 		fprintf(f,"\n");
 	}
+	double theta = atan2(d.principalAxes[0][1],d.principalAxes[0][0]) / M_PI * 180;
+	fprintf(aggregate,"%f %f %f %f %f %f %f\n",
+		d.bbCenter[0],d.bbCenter[1],d.bbCenter[2],
+		d.principalLengths[0],d.principalLengths[1],d.principalLengths[2],theta);
 #else
 	if (!kdtree) kdtree = new KdTree(this);
 	KdTree::Cube bb = kdtree->getBoundingBox();
@@ -386,6 +399,7 @@ void PCD::writeToOBJ(const char* filename) {
 	"l 6 8\n"
 	"l 7 8\n");
 	fclose(f);
+	fclose(aggregate);
 }
 
 PCD* PCD::LoadFromPLY(const char* fileName) {

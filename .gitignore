@@ -62,3 +62,6 @@ cloud/*
 !cloud/translatepcd.py
 !cloud/scalepcd.py
 !cloud/downsamplepcd.py
+!obstruction
+obstruction/*
+!obstruction/process_bounding_box.py

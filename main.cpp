@@ -78,9 +78,9 @@ void fileConversion(char* in, char* out) {
 			p->data_storage==PCD::ASCII ? "ascii" : "binary",
 			p->numPoints);
 
-		float segThreshold = 0.15, filterThreshold = 0.15, clusterThreshold = 0.3;
+		float segThreshold = 0.4, filterThreshold = 0.4, clusterThreshold = 0.1;
 		
-		PCD::Plane  coefficients = p->segmentPlane(10000,segThreshold,0.5);
+		PCD::Plane  coefficients = p->segmentPlane(10000,segThreshold,0.7);
 		printf("Plane Coefficients: %f %f %f %f\n",coefficients.a,coefficients.b,coefficients.c,coefficients.d);
 		std::vector<int> ind;
 		p->filterPlane(&ind,coefficients,filterThreshold,false);
@@ -126,8 +126,6 @@ void fileConversion(char* in, char* out) {
 		p->writeToPLY(out);
 	else if (strncmp(out + l - 4,".off",4) == 0)
 		p->writeToOFF(out);
-	else if (strncmp(out + l - 4,".obj",4) == 0)
-		p->writeToOBJ(out);
 	delete p;
 }
 
