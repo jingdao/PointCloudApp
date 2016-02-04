@@ -16,6 +16,7 @@
 
 struct HPoint {
 	int x,y,z;
+	unsigned char r,g,b;
 	int label;
 };
 
@@ -26,6 +27,7 @@ struct HPCD {
 	float leafSize;
 	float minX,minY,minZ,maxX,maxY,maxZ;
 	HPoint** data;
+	bool hasColor;
 };
 
 struct Box {
@@ -98,10 +100,15 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 		return NULL;
 	}
 	char buf[256];
+	std::vector<unsigned char> color_data;
 	PCD_data_storage data_storage = NONE;
 	int totalPoints = 0;
 	while (fgets(buf, 256, f)) {
 		if (sscanf(buf, "POINTS %d", &totalPoints) == 1) {
+		} else if (strncmp(buf,"FIELDS x y z rgb",16)==0) {
+			res->hasColor = true;
+		} else if (strncmp(buf,"FIELDS x y z",12)==0) {
+			res->hasColor = false;
 		} else if (strncmp(buf,"DATA ascii",10)==0) {
 			data_storage = ASCII;
 			break;
@@ -117,41 +124,83 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 		res->minZ = box->minZ;
 		res->maxZ = box->maxZ;
 		float x,y,z;
-		for (int i=0;i<totalPoints;i++) {
-			if (!fgets(buf,256,f))
-				break;
-			if (!sscanf(buf, "%f %f %f",&x,&y,&z) == 3)
-				break;
-			if (x >= res->minX && x <= res->maxX &&
-			    y >= res->minY && y <= res->maxY &&
-			    z >= res->minZ && z <= res->maxZ) {
-				float_data->push_back(x);
-				float_data->push_back(y);
-				float_data->push_back(z);
+		unsigned char r,g,b;
+		if (res->hasColor) {
+			for (int i=0;i<totalPoints;i++) {
+				if (!fgets(buf,256,f))
+					break;
+				if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+					break;
+				if (x >= res->minX && x <= res->maxX &&
+					y >= res->minY && y <= res->maxY &&
+					z >= res->minZ && z <= res->maxZ) {
+					float_data->push_back(x);
+					float_data->push_back(y);
+					float_data->push_back(z);
+					color_data.push_back(r);
+					color_data.push_back(g);
+					color_data.push_back(b);
+				}
+			}
+		} else {
+			for (int i=0;i<totalPoints;i++) {
+				if (!fgets(buf,256,f))
+					break;
+				if (!sscanf(buf, "%f %f %f",&x,&y,&z) == 3)
+					break;
+				if (x >= res->minX && x <= res->maxX &&
+					y >= res->minY && y <= res->maxY &&
+					z >= res->minZ && z <= res->maxZ) {
+					float_data->push_back(x);
+					float_data->push_back(y);
+					float_data->push_back(z);
+				}
 			}
 		}
 	} else {
 		float x,y,z;
+		unsigned char r,g,b;
 		if (!fgets(buf,256,f))
 			return NULL;
 		sscanf(buf, "%f %f %f",&x,&y,&z);
 		res->minX = res->maxX = x;
 		res->minY = res->maxY = y;
 		res->minZ = res->maxZ = z;
-		for (int i=1;i<totalPoints;i++) {
-			if (!fgets(buf,256,f))
-				break;
-			if (!sscanf(buf, "%f %f %f",&x,&y,&z) == 3)
-				break;
-			if (x < res->minX) res->minX = x;
-			else if (x > res->maxX) res->maxX = x;
-			if (y < res->minY) res->minY = y;
-			else if (y > res->maxY) res->maxY = y;
-			if (z < res->minZ) res->minZ = z;
-			else if (z > res->maxZ) res->maxZ = z;
-			float_data->push_back(x);
-			float_data->push_back(y);
-			float_data->push_back(z);
+		if (res->hasColor) {
+			for (int i=1;i<totalPoints;i++) {
+				if (!fgets(buf,256,f))
+					break;
+				if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+					break;
+				if (x < res->minX) res->minX = x;
+				else if (x > res->maxX) res->maxX = x;
+				if (y < res->minY) res->minY = y;
+				else if (y > res->maxY) res->maxY = y;
+				if (z < res->minZ) res->minZ = z;
+				else if (z > res->maxZ) res->maxZ = z;
+				float_data->push_back(x);
+				float_data->push_back(y);
+				float_data->push_back(z);
+				color_data.push_back(r);
+				color_data.push_back(g);
+				color_data.push_back(b);
+			}
+		} else {
+			for (int i=1;i<totalPoints;i++) {
+				if (!fgets(buf,256,f))
+					break;
+				if (!sscanf(buf, "%f %f %f",&x,&y,&z) == 3)
+					break;
+				if (x < res->minX) res->minX = x;
+				else if (x > res->maxX) res->maxX = x;
+				if (y < res->minY) res->minY = y;
+				else if (y > res->maxY) res->maxY = y;
+				if (z < res->minZ) res->minZ = z;
+				else if (z > res->maxZ) res->maxZ = z;
+				float_data->push_back(x);
+				float_data->push_back(y);
+				float_data->push_back(z);
+			}
 		}
 	}
 	fclose(f);
@@ -172,33 +221,70 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 	while (res->maxSize < 4 * totalPoints)
 		res->maxSize *= 2;
 	res->data = new HPoint*[res->maxSize]();
-	int i,j=0,k;
+	int i,j=0,k,l=0;
 	res->numPoints = 0;
-	for (i=0;i<totalPoints;i++) {
-		float x = (*float_data)[j++];
-		float y = (*float_data)[j++];
-		float z = (*float_data)[j++];
-		int xi = (int) ((x-res->minX)/res->leafSize);
-		int yi = (int) ((y-res->minY)/res->leafSize);
-		int zi = (int) ((z-res->minZ)/res->leafSize);
-		int ikey = getIntKey(xi,yi,zi);
-		int key = baseHash(res->maxSize,ikey);
-		int step = stepHash(res->maxSize,ikey);
-		for (k = 0; k < res->maxSize; k++) {
-			HPoint* h = res->data[key];
-			if (!h) {
-				HPoint* p = new HPoint;
-				p->x = xi;
-				p->y = yi;
-				p->z = zi;
-				res->data[key] = p;
-				res->numPoints++;
-				break;
-			} else if (h->x == xi && h->y == yi && h->z == zi){
-				break;
-			} else {
-				key += step;
-				key %= res->maxSize;
+	if (res->hasColor){
+		for (i=0;i<totalPoints;i++) {
+			float x = (*float_data)[j++];
+			float y = (*float_data)[j++];
+			float z = (*float_data)[j++];
+			unsigned char r = color_data[l++];
+			unsigned char g = color_data[l++];
+			unsigned char b = color_data[l++];
+			int xi = (int) ((x-res->minX)/res->leafSize);
+			int yi = (int) ((y-res->minY)/res->leafSize);
+			int zi = (int) ((z-res->minZ)/res->leafSize);
+			int ikey = getIntKey(xi,yi,zi);
+			int key = baseHash(res->maxSize,ikey);
+			int step = stepHash(res->maxSize,ikey);
+			for (k = 0; k < res->maxSize; k++) {
+				HPoint* h = res->data[key];
+				if (!h) {
+					HPoint* p = new HPoint;
+					p->x = xi;
+					p->y = yi;
+					p->z = zi;
+					p->r = r;
+					p->g = g;
+					p->b = b;
+					res->data[key] = p;
+					res->numPoints++;
+					break;
+				} else if (h->x == xi && h->y == yi && h->z == zi){
+					break;
+				} else {
+					key += step;
+					key %= res->maxSize;
+				}
+			}
+		}
+	} else {
+		for (i=0;i<totalPoints;i++) {
+			float x = (*float_data)[j++];
+			float y = (*float_data)[j++];
+			float z = (*float_data)[j++];
+			int xi = (int) ((x-res->minX)/res->leafSize);
+			int yi = (int) ((y-res->minY)/res->leafSize);
+			int zi = (int) ((z-res->minZ)/res->leafSize);
+			int ikey = getIntKey(xi,yi,zi);
+			int key = baseHash(res->maxSize,ikey);
+			int step = stepHash(res->maxSize,ikey);
+			for (k = 0; k < res->maxSize; k++) {
+				HPoint* h = res->data[key];
+				if (!h) {
+					HPoint* p = new HPoint;
+					p->x = xi;
+					p->y = yi;
+					p->z = zi;
+					res->data[key] = p;
+					res->numPoints++;
+					break;
+				} else if (h->x == xi && h->y == yi && h->z == zi){
+					break;
+				} else {
+					key += step;
+					key %= res->maxSize;
+				}
 			}
 		}
 	}
@@ -209,6 +295,7 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 
 HPCD* HPCD_Init_KITTI(char* inFile,int numGrid,Box* box,std::vector<float> *float_data) {
 	HPCD* res = new HPCD;
+	res->hasColor = false;
 	FILE* f = fopen(inFile,"r");
 	if (!f) {
 		printf("%s not found\n",inFile);
@@ -329,6 +416,133 @@ HPCD* HPCD_Init_KITTI(char* inFile,int numGrid,Box* box,std::vector<float> *floa
 	return res;
 }
 
+HPCD* HPCD_Init_PTS(char* inFile,int numGrid,Box* box,std::vector<float> *float_data) {
+	std::vector<unsigned char> color_data;
+	HPCD* res = new HPCD;
+	res->hasColor = true;
+	FILE* f = fopen(inFile,"r");
+	if (!f) {
+		printf("%s not found\n",inFile);
+		return NULL;
+	}
+	char buf[256];
+	int totalPoints = 0;
+	if (fgets(buf,256,f))
+		sscanf(buf,"%d",&totalPoints);
+	else
+		return NULL;
+	if (box) {
+		res->minX = box->minX;
+		res->maxX = box->maxX;
+		res->minY = box->minY;
+		res->maxY = box->maxY;
+		res->minZ = box->minZ;
+		res->maxZ = box->maxZ;
+		float x,y,z;
+		unsigned char r,g,b;
+		for (int i=0;i<totalPoints;i++) {
+			if (!fgets(buf,256,f))
+				break;
+			if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+				break;
+			if (x >= res->minX && x <= res->maxX &&
+			    y >= res->minY && y <= res->maxY &&
+			    z >= res->minZ && z <= res->maxZ) {
+				float_data->push_back(x);
+				float_data->push_back(y);
+				float_data->push_back(z);
+				color_data.push_back(r);
+				color_data.push_back(g);
+				color_data.push_back(b);
+			}
+		}
+	} else {
+		float x,y,z;
+		unsigned char r,g,b;
+		if (!fgets(buf,256,f))
+			return NULL;
+		sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b);
+		res->minX = res->maxX = x;
+		res->minY = res->maxY = y;
+		res->minZ = res->maxZ = z;
+		for (int i=1;i<totalPoints;i++) {
+			if (!fgets(buf,256,f))
+				break;
+			if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+				break;
+			if (x < res->minX) res->minX = x;
+			else if (x > res->maxX) res->maxX = x;
+			if (y < res->minY) res->minY = y;
+			else if (y > res->maxY) res->maxY = y;
+			if (z < res->minZ) res->minZ = z;
+			else if (z > res->maxZ) res->maxZ = z;
+			float_data->push_back(x);
+			float_data->push_back(y);
+			float_data->push_back(z);
+			color_data.push_back(r);
+			color_data.push_back(g);
+			color_data.push_back(b);
+		}
+	}
+	fclose(f);
+#if PROFILE
+	clock_gettime(CLOCK_MONOTONIC,&toc);
+	printf("Profile (Initialization): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
+	tic = toc;
+#endif
+	totalPoints = float_data->size() / 3;
+	float minDist = res->maxX - res->minX;
+	if (res->maxY - res->minY < minDist)
+		minDist = res->maxY - res->minY;
+	if (res->maxZ - res->minZ < minDist)
+		minDist = res->maxZ - res->minZ;
+	res->numGrid = numGrid;
+	res->leafSize = minDist / res->numGrid;
+	res->maxSize = 8; 
+	while (res->maxSize < 4 * totalPoints)
+		res->maxSize *= 2;
+	res->data = new HPoint*[res->maxSize]();
+	int i,j=0,k,l=0;
+	res->numPoints = 0;
+	for (i=0;i<totalPoints;i++) {
+		float x = (*float_data)[j++];
+		float y = (*float_data)[j++];
+		float z = (*float_data)[j++];
+		unsigned char r = color_data[l++];
+		unsigned char g = color_data[l++];
+		unsigned char b = color_data[l++];
+		int xi = (int) ((x-res->minX)/res->leafSize);
+		int yi = (int) ((y-res->minY)/res->leafSize);
+		int zi = (int) ((z-res->minZ)/res->leafSize);
+		int ikey = getIntKey(xi,yi,zi);
+		int key = baseHash(res->maxSize,ikey);
+		int step = stepHash(res->maxSize,ikey);
+		for (k = 0; k < res->maxSize; k++) {
+			HPoint* h = res->data[key];
+			if (!h) {
+				HPoint* p = new HPoint;
+				p->x = xi;
+				p->y = yi;
+				p->z = zi;
+				p->r = r;
+				p->g = g;
+				p->b = b;
+				res->data[key] = p;
+				res->numPoints++;
+				break;
+			} else if (h->x == xi && h->y == yi && h->z == zi){
+				break;
+			} else {
+				key += step;
+				key %= res->maxSize;
+			}
+		}
+	}
+	printf("Processed point cloud (numPoints:%d maxSize:%d leafSize:%f)\n",res->numPoints,res->maxSize,res->leafSize);
+	printf("Bounding box: x:(%.2f %.2f) y:(%.2f %.2f) z:(%.2f %.2f)\n",res->minX,res->maxX,res->minY,res->maxY,res->minZ,res->maxZ);
+	return res;
+}
+
 void HPCD_resize(HPCD* res) { //to save memory
 	int newSize = 8; 
 	while (newSize < 4 * res->numPoints)
@@ -372,24 +586,49 @@ void HPCD_write(char* filename,HPCD* pointcloud) {
 		printf("Cannot write to file: %s\n", filename);
 		return;
 	}
-	fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
-	"VERSION 0.7\n"
-	"FIELDS x y z\n"
-	"SIZE 4 4 4\n"
-	"TYPE F F F\n"
-	"COUNT 1 1 1\n"
-	"WIDTH %d\n"
-	"HEIGHT 1\n"
-	"VIEWPOINT 0 0 0 1 0 0 0\n"
-	"POINTS %d\n"
-	"DATA ascii\n",pointcloud->numPoints,pointcloud->numPoints);
-	for (int i=0;i<pointcloud->maxSize;i++) {
-		HPoint *h = pointcloud->data[i];
-		if (h) {
-			fprintf(f,"%f %f %f\n",
-				pointcloud->minX + h->x * pointcloud->leafSize,
-				pointcloud->minY + h->y * pointcloud->leafSize,
-				pointcloud->minZ + h->z * pointcloud->leafSize);
+	if (pointcloud->hasColor) {
+		fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
+		"VERSION 0.7\n"
+		"FIELDS x y z rgb\n"
+		"SIZE 4 4 4 4\n"
+		"TYPE F F F I\n"
+		"COUNT 1 1 1 1\n"
+		"WIDTH %d\n"
+		"HEIGHT 1\n"
+		"VIEWPOINT 0 0 0 1 0 0 0\n"
+		"POINTS %d\n"
+		"DATA ascii\n",pointcloud->numPoints,pointcloud->numPoints);
+		for (int i=0;i<pointcloud->maxSize;i++) {
+			HPoint *h = pointcloud->data[i];
+			if (h) {
+				int rgb = (h->r << 16) | (h->g << 8) | h->b;
+				fprintf(f,"%f %f %f %d\n",
+					pointcloud->minX + h->x * pointcloud->leafSize,
+					pointcloud->minY + h->y * pointcloud->leafSize,
+					pointcloud->minZ + h->z * pointcloud->leafSize,
+					rgb);
+			}
+		}
+	} else {
+		fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
+		"VERSION 0.7\n"
+		"FIELDS x y z\n"
+		"SIZE 4 4 4\n"
+		"TYPE F F F\n"
+		"COUNT 1 1 1\n"
+		"WIDTH %d\n"
+		"HEIGHT 1\n"
+		"VIEWPOINT 0 0 0 1 0 0 0\n"
+		"POINTS %d\n"
+		"DATA ascii\n",pointcloud->numPoints,pointcloud->numPoints);
+		for (int i=0;i<pointcloud->maxSize;i++) {
+			HPoint *h = pointcloud->data[i];
+			if (h) {
+				fprintf(f,"%f %f %f\n",
+					pointcloud->minX + h->x * pointcloud->leafSize,
+					pointcloud->minY + h->y * pointcloud->leafSize,
+					pointcloud->minZ + h->z * pointcloud->leafSize);
+			}
 		}
 	}
 	fclose(f);
@@ -771,6 +1010,8 @@ int main(int argc,char* argv[]) {
 		cloud = HPCD_Init(inFile,numGrid,box,&float_data);
 	else if (strcmp(inFile+strlen(inFile)-4,".bin")==0)
 		cloud = HPCD_Init_KITTI(inFile,numGrid,box,&float_data);
+	else if (strcmp(inFile+strlen(inFile)-4,".pts")==0)
+		cloud = HPCD_Init_PTS(inFile,numGrid,box,&float_data);
 	if (!cloud || cloud->numPoints <= 0)
 		return 1;
 

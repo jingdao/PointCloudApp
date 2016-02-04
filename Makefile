@@ -60,6 +60,9 @@ hpcd: hpcd.cpp
 
 scan_eval: scan_eval.cpp
 	$(CXX) -ggdb3 -Wall -o $@ $<
+	
+esfc: esfc.cpp
+	$(CXX) -ggdb3 -Wall -o $@ $< -llapack
 
 debug: main
 

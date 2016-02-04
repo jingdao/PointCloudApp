@@ -20,6 +20,7 @@
 !rd_desc.cpp
 !hpcd.cpp
 !scan_eval.cpp
+!esfc.cpp
 !plyheader
 !kitti
 kitti/*
