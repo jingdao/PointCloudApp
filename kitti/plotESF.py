@@ -82,8 +82,8 @@ for key in keys:
 #	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
 
 plt.legend(loc='upper left')
-plt.axis([0, 640, 0, 0.02])
-matplotlib.rcParams.update({'font.size': 22})
+plt.axis([0, num_bins, 0, 0.02])
+matplotlib.rcParams.update({'font.size': 12})
 plt.show()
 
 

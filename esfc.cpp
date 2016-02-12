@@ -41,7 +41,7 @@ inline float distance(HPoint a,HPoint b) {
 }
 
 inline float angle(float a,float b,float c) {
-	return acos((a*a + b*b - c*c) / (2 * a * b));
+	return fabs(acos((a*a + b*b - c*c) / (2 * a * b)));
 }
 
 inline int baseHash(int size, int hashKey) {
@@ -116,16 +116,58 @@ void getPCA_XY(HPCD* pointcloud) {
 		memcpy(v+2,v,2*sizeof(double));
 		memcpy(v,tmpV,2*sizeof(double));
 	}
+	//project to principal axes
 	for (int j=0;j<pointcloud->maxSize;j++) {
 		HPoint *p = pointcloud->data[j];
 		if (p) {
 			float dotProductX = (p->x - center[0]) * v[0] + (p->y -center[1]) * v[1];
 			float dotProductY = (p->x - center[0]) * v[2] + (p->y - center[1]) * v[3];
-//			p->x = (int) (dotProductX + center[0]);
-//			p->y = (int) (dotProductY + center[1]);
 			p->x = (int) (dotProductX);
 			p->y = (int) (dotProductY);
 			p->z -= center[2];
+		}
+	}
+	//fix direction of major axis
+	int frontMinX=pointcloud->numGrid;
+	int frontMaxX=0;
+	int frontMinY=pointcloud->numGrid;
+	int frontMaxY=-pointcloud->numGrid;
+	int frontMinZ=pointcloud->numGrid;
+	int frontMaxZ=-pointcloud->numGrid;
+	int backMinX=pointcloud->numGrid;
+	int backMaxX=0;
+	int backMinY=pointcloud->numGrid;
+	int backMaxY=-pointcloud->numGrid;
+	int backMinZ=pointcloud->numGrid;
+	int backMaxZ=-pointcloud->numGrid;
+	for (int j=0;j<pointcloud->maxSize;j++) {
+		HPoint *p = pointcloud->data[j];
+		if (p) {
+			if (p->x > 0) {
+				if (abs(p->x) > frontMaxX) frontMaxX = abs(p->x);
+				if (abs(p->x) < frontMinX) frontMinX = abs(p->x);
+				if (p->y > frontMaxY) frontMaxY = p->y;
+				if (p->y < frontMinY) frontMinY = p->y;
+				if (p->z > frontMaxZ) frontMaxZ = p->z;
+				if (p->z < frontMinZ) frontMinZ = p->z;
+			} else {
+				if (abs(p->x) > backMaxX) backMaxX = abs(p->x);
+				if (abs(p->x) < backMinX) backMinX = abs(p->x);
+				if (p->y > backMaxY) backMaxY = p->y;
+				if (p->y < backMinY) backMinY = p->y;
+				if (p->z > backMaxZ) backMaxZ = p->z;
+				if (p->z < backMinZ) backMinZ = p->z;
+			}
+		}
+	}
+	int frontVolume = (frontMaxX-frontMinX) * (frontMaxY-frontMinY) * (frontMaxZ-frontMinZ);
+	int backVolume = (backMaxX-backMinX) * (backMaxY-backMinY) * (backMaxZ-backMinZ);
+	if (frontVolume > backVolume) {
+		for (int j=0;j<pointcloud->maxSize;j++) {
+			HPoint *p = pointcloud->data[j];
+			if (p) {
+				p->x = -p->x;
+			}
 		}
 	}
 }
@@ -505,7 +547,7 @@ std::vector<float> getHistogram(HPCD* cloud) {
 		float c = distance(p1,p2);
 		float s = (a + b + c) / 2;
 		float area = sqrt(s*(s-a)*(s-b)*(s-c));
-		if (area < 0.01) { //collinear
+		if (isnan(area) || area < 1) { //collinear
 			n--; continue;
 		}
 		distance_data.push_back(a);
@@ -516,12 +558,27 @@ std::vector<float> getHistogram(HPCD* cloud) {
 		angle_data.push_back(angle(c,a,b));
 		area_data.push_back(area);
 	}
-	hist.resize(numBins*10,0);
-	equalize(&angle_data,numBins,&hist[0]);
-	equalize(&area_data,numBins,&hist[3*numBins]);
-	equalize(&distance_data,numBins,&hist[6*numBins]);
+//	hist.resize(numBins*10,0);
+//	equalize(&angle_data,numBins,&hist[0]);
+//	equalize(&area_data,numBins,&hist[3*numBins]);
+//	equalize(&distance_data,numBins,&hist[6*numBins]);
+//	hist.resize(numBins*3,0);
+//	equalize(&angle_data,numBins,&hist[0]);
+//	equalize(&area_data,numBins,&hist[numBins]);
+//	equalize(&distance_data,numBins,&hist[2*numBins]);
+	hist.resize(numBins,0);
+	equalize(&distance_data,numBins,&hist[0]);
 	delete[] pointdata;
 	return hist;
+}
+
+std::vector<float> getAssemblyHistogram(std::vector<HPCD> assembly) {
+	std::vector<float> histN;
+	for (size_t i=0;i<assembly.size();i++) {
+		std::vector<float> hist = getHistogram(&assembly[i]);
+		histN.insert(histN.end(),hist.begin(),hist.end());
+	}
+	return histN;
 }
 
 void writeHistogram(char* fileName,std::vector<float> hist) {
@@ -573,7 +630,7 @@ std::vector<HPCD> make_part(HPCD* cloud) {
 
 int main(int argc, char* argv[]) {
 	if (argc<2) {
-		printf("./esfc 0-cloud.pcd 0-cloud.pcd-esf.pcd\n");
+		printf("./esfc 0-cloud.pcd\n");
 		return 1;
 	}
 
@@ -594,7 +651,8 @@ int main(int argc, char* argv[]) {
 		HPCD_write(buffer,&assembly[i]);
 	}
 
-	writeHistogram(argv[2],getHistogram(cloud));
+	sprintf(buffer,"%s-esf.pcd",argv[1]);
+	writeHistogram(buffer,getAssemblyHistogram(assembly));
 	HPCD_delete(cloud);
 	for (size_t i=0;i<assembly.size();i++) {
 		delete[] assembly[i].data;
