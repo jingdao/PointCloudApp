@@ -1,5 +1,8 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/esf.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 typedef pcl::ESFSignature640 DescriptorType;
 
@@ -14,7 +17,9 @@ main(int argc, char** argv)
 	{
 		return -1;
 	}
-	char* outputFile = argv[2];
+//	char* outputFile = argv[2];
+	char outputFile[128];
+	sprintf(outputFile,"%s-esf.pcd",argv[1]);
 
 	pcl::ESFEstimation<pcl::PointXYZ, pcl::ESFSignature640> esf;
 	esf.setInputCloud(object);

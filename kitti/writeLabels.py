@@ -30,7 +30,7 @@ for n in range(maxN):
 		outfile.write(str(labels[n])+' ')
 	for i in range(0,11):
 		fd.readline()
-	features = fd.readline().split(' ')
+	features = fd.readline().split()
 	n = 1
 	for t in features:
 		outfile.write(str(n)+':'+str(float(t))+' ')

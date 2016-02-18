@@ -12,23 +12,34 @@ else:
 	dr = '.'
 inputFile = {'train':dr+'/svm_train_scaled.txt', 'test':dr+'/svm_test_scaled.txt'}
 outputFile = dr+'/svm_prediction.txt'
-numFeatures = 640
 use_linear = True
-plot_training_size = True
+plot_training_size = False
+plot_weights = False
 
 #import data into matrix format
 features = {'train':[], 'test':[]}
+sparse_features = {'train':[], 'test':[]}
 labels = {'train':[], 'test':[]}
+indices=[]
 for dataset in ['train', 'test']:
 	file = open(inputFile[dataset])
 	for line in file:
 		tokens = line.split()
 		labels[dataset].append(int(tokens[0]))
-		f = [0] * numFeatures
+		f = {}
 		for i in range(1,len(tokens)):
 			ind = int(tokens[i].split(':')[0])
 			val = float(tokens[i].split(':')[1])
-			f[ind - 1] = val
+			f[ind] = val
+		sparse_features[dataset].append(f)
+		indices.extend(f.keys())
+
+numFeatures = max(indices)
+for dataset in ['train','test']:
+	for sf in sparse_features[dataset]:
+		f = [0] * numFeatures
+		for ind in sf:
+			f[ind-1] = sf[ind]
 		features[dataset].append(f)
 
 classes = set(labels['train'])
@@ -79,6 +90,16 @@ if use_linear:
 else:
 	proba = svc.predict_proba(features['test'])
 print 'Accuracy %.2f%%' % (svc.score(features['test'],labels['test'])*100)
+
+if plot_weights:
+	colors = {0:'#ffffff',1:'#ff0000',2:'#00ff00',3:'#0000ff',4:'#ffff00',5:'#ff00ff',6:'#00ffff'}
+	import matplotlib.pyplot as plt
+	for i in range(len(svc.coef_)):
+		w = svc.coef_[i]
+		plt.plot(np.arange(len(w)),w,lw=2,color=colors[i])
+	plt.legend(loc='upper left')
+	plt.show()
+
 
 #output data
 file = open(outputFile,'w')

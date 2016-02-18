@@ -9,6 +9,8 @@
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
 #define PROFILE 0
+#define SAVE_ASSEMBLY 1
+#define VERBOSE 0
 
 enum PCD_data_storage {
 	ASCII,
@@ -491,7 +493,9 @@ void HPCD_write(char* filename,HPCD* pointcloud) {
 		}
 	}
 	fclose(f);
+#if VERBOSE
 	printf("Wrote %d points to %s\n",pointcloud->numPoints,filename);
+#endif
 }
 
 void HPCD_delete(HPCD* cloud) {
@@ -558,10 +562,6 @@ std::vector<float> getHistogram(HPCD* cloud) {
 		angle_data.push_back(angle(c,a,b));
 		area_data.push_back(area);
 	}
-//	hist.resize(numBins*10,0);
-//	equalize(&angle_data,numBins,&hist[0]);
-//	equalize(&area_data,numBins,&hist[3*numBins]);
-//	equalize(&distance_data,numBins,&hist[6*numBins]);
 //	hist.resize(numBins*3,0);
 //	equalize(&angle_data,numBins,&hist[0]);
 //	equalize(&area_data,numBins,&hist[numBins]);
@@ -600,7 +600,9 @@ void writeHistogram(char* fileName,std::vector<float> hist) {
 		fprintf(f,"%f ",hist[i]);
 	}
 	fprintf(f,"\n");
+#if VERBOSE
 	printf("Wrote %lu-bin histogram to %s\n",hist.size(),fileName);
+#endif
 	fclose(f);
 }
 
@@ -646,10 +648,12 @@ int main(int argc, char* argv[]) {
 	getPCA_XY(cloud);
 	char buffer[128];
 	std::vector<HPCD> assembly = make_part(cloud);
+#if SAVE_ASSEMBLY
 	for (size_t i=0;i<assembly.size();i++) {
 		sprintf(buffer,"%s-%lu-part.pcd",argv[1],i);
 		HPCD_write(buffer,&assembly[i]);
 	}
+#endif
 
 	sprintf(buffer,"%s-esf.pcd",argv[1]);
 	writeHistogram(buffer,getAssemblyHistogram(assembly));

@@ -32,21 +32,30 @@ categoryFile.close()
 	
 if svmdata_file:
 	labels=[]
+	indices=[]
+	features=[]
 	file = open(svmdata_file)
 	for line in file:
 		tokens = line.split()
-		num_bins = len(tokens) - 1
 		l = int(tokens[0])
 		labels.append(l)
-		f = [0] * num_bins
+		f = {}
 		for i in range(1,len(tokens)):
 			ind = int(tokens[i].split(':')[0])
 			val = float(tokens[i].split(':')[1])
-			f[ind - 1] = val
-		if not l in x:
-			x[l] = np.arange(num_bins)
-			y[l] = []
-		y[l].append(f)
+			f[ind] = val
+		features.append(f)
+		indices.extend(f.keys())
+	num_bins = max(indices)
+	for i in range(len(labels)):
+		line = features[i]
+		f = [0] * num_bins
+		for ind in line:
+			f[ind - 1] = line[ind]
+		if not labels[i] in x:
+			x[labels[i]] = np.arange(num_bins)
+			y[labels[i]] = []
+		y[labels[i]].append(f)
 else:
 	labels = []
 	labelFile = open('labels.txt')
@@ -77,9 +86,9 @@ else:
 for key in keys:
 	mean[key] = np.mean(y[key],axis=0)
 	stddev[key] = np.std(y[key],axis=0)
-	plt.plot(x[key],mean[key],lw=0,label=categories[key],color=colors[key],marker=markers[key])
-#	plt.plot(x[key],mean[key],lw=2,label=categories[key],color=colors[key])
-#	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
+#	plt.plot(x[key],mean[key],lw=0,label=categories[key],color=colors[key],marker=markers[key])
+	plt.plot(x[key],mean[key],lw=2,label=categories[key],color=colors[key])
+	plt.fill_between(x[key],mean[key]+stddev[key],mean[key]-stddev[key],facecolor=colors[key],alpha=0.5)
 
 plt.legend(loc='upper left')
 plt.axis([0, num_bins, 0, 0.02])

@@ -9,7 +9,7 @@
 #seq_out="6 1 6"
 #seq_out="8 1 8"
 #seq_out="1 1 1"
-seq_out="2 1 2"
+seq_out="8 1 8"
 kitti1_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_29_drive_0071
 kitti2_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_26_drive_0106
 kitti3_dir=/home/jd/Documents/PointCloudApp/cloud/2011_09_28_drive_0002
@@ -23,9 +23,11 @@ svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 #cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/combined
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/mixed
+#ESF=/home/jd/Documents/PointCloudApp/tools/esf
+ESF=/home/jd/Documents/PointCloudApp/esfc
 
 useCAD=true
-computeDescriptors=false
+computeDescriptors=true
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
@@ -34,7 +36,7 @@ ldaOption=false
 lrOption=false
 bayesOption=false
 svcOption=true
-savePointCloud=true
+savePointCloud=false
 kernel=0
 svm_type=0
 k_parameter=10
@@ -42,15 +44,39 @@ k_parameter=10
 if $useCAD
 then
 	input_dir=$cad_dir
-	#compute descriptors
 	if $computeDescriptors
 	then
 		for j in $cad_dir/*-cloud.pcd
 		do
-			$script_dir/../tools/esf $j $j-esf.pcd
+			$ESF $j $j-esf.pcd
 		done
 		$script_dir/writeLabels.py $cad_dir
 	fi
+else
+	if $computeDescriptors
+	then
+		for i in `seq -w $seq_in`
+		do
+			for j in $input_dir/clusters$i/*-cloud.pcd
+			do
+				$ESF $j $j-esf.pcd
+			done
+			$script_dir/writeLabels.py $input_dir/clusters$i
+		done
+	fi
+fi
+
+#compute descriptors
+if $computeDescriptors
+then
+	for i in `seq -w $seq_out`
+	do
+		for j in $output_dir/clusters$i/*-cloud.pcd
+		do
+			$ESF $j $j-esf.pcd
+		done
+		$script_dir/writeLabels.py $output_dir/clusters$i
+	done
 fi
 
 #divide into training and testing data

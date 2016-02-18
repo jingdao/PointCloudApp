@@ -26,6 +26,10 @@ if "-c" in sys.argv:
 	saveCSV = True
 else:
 	saveCSV = False
+if "-m" in sys.argv:
+	showConfusion = True
+else:
+	showConfusion = False
 truePositive = {}
 falsePositive = {}
 falseNegative = {}
@@ -107,16 +111,17 @@ totalPre = sum(truePositive.values()) * 100.0 / (sum(truePositive.values()) + su
 totalRec = sum(truePositive.values()) * 100.0 / (sum(truePositive.values()) + sum(falseNegative.values()))
 print "%2s %15s %4d %9d %8.2f %10.2f %6.2f" % ("","overall",numTrials,sum(truePositive.values()),totalAcc,totalPre,totalRec)
 
-print "\n%40s" % "Predicted"
-sys.stdout.write("%10.10s " % "Actual")
-for i in range(len(categories)):
-	sys.stdout.write("%10.10s " % categories[i])
-sys.stdout.write("\n")
-for i in range(len(categories)):
-	sys.stdout.write("%10.10s " % categories[i])
-	for j in range(len(categories)):
-		sys.stdout.write("%10d " % confusionMatrix[i][j])
+if showConfusion:
+	print "\n%40s" % "Predicted"
+	sys.stdout.write("%10.10s " % "Actual")
+	for i in range(len(categories)):
+		sys.stdout.write("%10.10s " % categories[i])
 	sys.stdout.write("\n")
+	for i in range(len(categories)):
+		sys.stdout.write("%10.10s " % categories[i])
+		for j in range(len(categories)):
+			sys.stdout.write("%10d " % confusionMatrix[i][j])
+		sys.stdout.write("\n")
 
 if saveCSV:
 	csvFile = open(inputDir+'/score.csv','w')
