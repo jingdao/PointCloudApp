@@ -23,14 +23,17 @@ svm_dir=/home/jd/Downloads/libsvm-3.20
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 #cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/combined
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/mixed
-#ESF=/home/jd/Documents/PointCloudApp/tools/esf
-ESF=/home/jd/Documents/PointCloudApp/esfc
+ESFO=/home/jd/Documents/PointCloudApp/tools/esf
+ESFC=/home/jd/Documents/PointCloudApp/esfc
+ESF=$ESFC
 
 useCAD=true
 computeDescriptors=true
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
+combineAssembly=false
+
 knnOption=false
 ldaOption=false
 lrOption=false
@@ -46,10 +49,29 @@ then
 	input_dir=$cad_dir
 	if $computeDescriptors
 	then
-		for j in $cad_dir/*-cloud.pcd
-		do
-			$ESF $j $j-esf.pcd
-		done
+		rm $cad_dir/*-part.pcd
+		rm $cad_dir/*-esf.pcd
+		if $combineAssembly
+		then
+			for j in $cad_dir/*-cloud.pcd
+			do
+				$ESFC $j
+			done
+			for j in $cad_dir/*-part.pcd
+			do
+				$ESF $j
+			done
+			numLines=`cat $cad_dir/labels.txt | wc -l`
+			for j in `seq 0 $((numLines-1))`
+			do
+				~/Documents/PointCloudApp/cloud/concat_esf.py $cad_dir/$j-cloud.pcd-{0,1,2}-part.pcd-esf.pcd $cad_dir/$j-cloud.pcd-esf.pcd
+			done
+		else
+			for j in $cad_dir/*-cloud.pcd
+			do
+				$ESF $j
+			done
+		fi
 		$script_dir/writeLabels.py $cad_dir
 	fi
 else
@@ -57,10 +79,29 @@ else
 	then
 		for i in `seq -w $seq_in`
 		do
-			for j in $input_dir/clusters$i/*-cloud.pcd
-			do
-				$ESF $j $j-esf.pcd
-			done
+			rm $input_dir/clusters$i/*-part.pcd
+			rm $input_dir/clusters$i/*-esf.pcd
+			if $combineAssembly
+			then
+				for j in $input_dir/clusters$i/*-cloud.pcd
+				do
+					$ESFC $j
+				done
+				for j in $input_dir/clusters$i/*-part.pcd
+				do
+					$ESF $j
+				done
+				numLines=`cat $input_dir/clusters$i/labels.txt | wc -l`
+				for j in `seq 0 $((numLines-1))`
+				do
+					~/Documents/PointCloudApp/cloud/concat_esf.py $input_dir/clusters$i/$j-cloud.pcd-{0,1,2}-part.pcd-esf.pcd $input_dir/clusters$i/$j-cloud.pcd-esf.pcd
+				done
+			else
+				for j in $input_dir/clusters$i/*-cloud.pcd
+				do
+					$ESF $j
+				done
+			fi
 			$script_dir/writeLabels.py $input_dir/clusters$i
 		done
 	fi
@@ -71,10 +112,29 @@ if $computeDescriptors
 then
 	for i in `seq -w $seq_out`
 	do
-		for j in $output_dir/clusters$i/*-cloud.pcd
-		do
-			$ESF $j $j-esf.pcd
-		done
+		rm $output_dir/clusters$i/*-part.pcd
+		rm $output_dir/clusters$i/*-esf.pcd
+		if $combineAssembly
+		then
+			for j in $output_dir/clusters$i/*-cloud.pcd
+			do
+				$ESFC $j
+			done
+			for j in $output_dir/clusters$i/*-part.pcd
+			do
+				$ESF $j
+			done
+			numLines=`cat $output_dir/clusters$i/labels.txt | wc -l`
+			for j in `seq 0 $((numLines-1))`
+			do
+				~/Documents/PointCloudApp/cloud/concat_esf.py $output_dir/clusters$i/$j-cloud.pcd-{0,1,2}-part.pcd-esf.pcd $output_dir/clusters$i/$j-cloud.pcd-esf.pcd
+			done
+		else
+			for j in $output_dir/clusters$i/*-cloud.pcd
+			do
+				$ESF $j
+			done
+		fi
 		$script_dir/writeLabels.py $output_dir/clusters$i
 	done
 fi

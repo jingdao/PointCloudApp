@@ -572,10 +572,51 @@ std::vector<float> getHistogram(HPCD* cloud) {
 	return hist;
 }
 
+std::vector<float> getDensity(HPCD* cloud) {
+	std::vector<int> density;
+	std::vector<float> hist;
+	int numGrid = 2;
+	density.resize(numGrid * numGrid * numGrid);
+	int* pointdata = new int[cloud->numPoints*3];
+	int k=0;
+	for (int j=0;j<cloud->maxSize;j++) {
+		if (cloud->data[j]) {
+			pointdata[k++] = cloud->data[j]->x;
+			pointdata[k++] = cloud->data[j]->y;
+			pointdata[k++] = cloud->data[j]->z;
+		}
+	}
+	float minX = pointdata[0], maxX = pointdata[0];
+	float minY = pointdata[1], maxY = pointdata[1];
+	float minZ = pointdata[2], maxZ = pointdata[2];
+	for (int i=1;i<cloud->numPoints;i++) {
+		if (pointdata[i*3] < minX) minX = pointdata[i*3];
+		if (pointdata[i*3] > maxX) maxX = pointdata[i*3];
+		if (pointdata[i*3+1] < minY) minY = pointdata[i*3+1];
+		if (pointdata[i*3+1] > maxY) maxY = pointdata[i*3+1];
+		if (pointdata[i*3+2] < minZ) minZ = pointdata[i*3+2];
+		if (pointdata[i*3+2] > maxZ) maxZ = pointdata[i*3+2];
+	}
+	float scaleX = 1.0 * (numGrid - 1) / (maxX - minX);
+	float scaleY = 1.0 * (numGrid - 1) / (maxY - minY);
+	float scaleZ = 1.0 * (numGrid - 1) / (maxZ - minZ);
+	for (int i=0;i<cloud->numPoints;i++) {
+		int xi = (int) ((pointdata[i*3] - minX) * scaleX);
+		int yi = (int) ((pointdata[i*3+1] - minY) * scaleY);
+		int zi = (int) ((pointdata[i*3+2] - minZ) * scaleZ);
+		density[xi + yi*numGrid + zi*numGrid*numGrid]++;
+	}
+	for (size_t i=0;i<density.size();i++) {
+		hist.push_back(1.0 * density[i] / cloud->numPoints);
+	}
+	return hist;
+}
+
 std::vector<float> getAssemblyHistogram(std::vector<HPCD> assembly) {
 	std::vector<float> histN;
 	for (size_t i=0;i<assembly.size();i++) {
 		std::vector<float> hist = getHistogram(&assembly[i]);
+//		std::vector<float> hist = getDensity(&assembly[i]);
 		histN.insert(histN.end(),hist.begin(),hist.end());
 	}
 	return histN;
@@ -609,14 +650,16 @@ void writeHistogram(char* fileName,std::vector<float> hist) {
 std::vector<HPCD> make_part(HPCD* cloud) {
 	std::vector<HPCD> assembly;
 	std::vector< std::vector<HPoint*> > points;
-	points.resize(8);
+	points.resize(5);
 	for (int i=0;i<cloud->maxSize;i++) {
 		HPoint *h = cloud->data[i];
 		if (h) {
 			bool fb = h->x >= 0;
 			bool lr = h->y >= 0;
 			bool ud = h->z >= 0;
-			points[(ud<<2)|(lr<<1)|fb].push_back(h);
+//			points[(ud<<2)|(lr<<1)|fb].push_back(h);
+			points[(ud<<1)|fb].push_back(h);
+			points[4].push_back(h);
 		}
 	}
 	for (unsigned int i=0;i<points.size();i++) {
