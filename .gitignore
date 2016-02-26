@@ -38,6 +38,9 @@ kitti/*
 !kitti/bayes.py
 !kitti/cad_pipeline.sh
 !kitti/svc.py
+!kitti/decision_tree.py
+!kitti/boosting.py
+!kitti/adaboost.py
 !tools
 tools/*
 !tools/esf.cpp
@@ -47,6 +50,15 @@ tools/*
 !tools/vizNeighbors.cpp
 !tools/template_alignment.cpp
 !tools/alignment_prerejective.cpp
+!tools/vfh.cpp
+!tools/our_cvfh.cpp
+!tools/rsd.h
+!tools/rsd.hpp
+!tools/rsd.cpp
+!tools/grsd.h
+!tools/grsd.hpp
+!tools/grsd.cpp
+!tools/curvature.cpp
 !tools/CMakeLists.txt
 !benchmark
 benchmark/*

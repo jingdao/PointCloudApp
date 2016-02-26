@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <algorithm>
 #include <math.h>
 #include <time.h>
 #include "lapack.h"
@@ -11,6 +12,10 @@
 #define PROFILE 0
 #define SAVE_ASSEMBLY 1
 #define VERBOSE 0
+#define NUM_PARTS 5
+#define REDUCED_FEATURE 1
+#define USE_DENSITY 0
+#define GLOBAL_NORM 0
 
 enum PCD_data_storage {
 	ASCII,
@@ -24,6 +29,10 @@ struct HPoint {
 	int label;
 };
 
+struct Box {
+	float minX,minY,minZ,maxX,maxY,maxZ;
+};
+
 struct HPCD {
 	int numGrid;
 	int numPoints;
@@ -32,10 +41,7 @@ struct HPCD {
 	float minX,minY,minZ,maxX,maxY,maxZ;
 	HPoint** data;
 	bool hasColor;
-};
-
-struct Box {
-	float minX,minY,minZ,maxX,maxY,maxZ;
+	Box oriented_box;
 };
 
 inline float distance(HPoint a,HPoint b) {
@@ -86,6 +92,33 @@ void eigenvalue(int N,double* A,double* lambda_real,double* lambda_imag,double* 
 	delete[] work;
 }
 
+Box getBoundingBox(HPCD* pointcloud) {
+	Box b;
+	bool init = true;
+	for (int i=0;i<pointcloud->maxSize;i++) {
+		HPoint* p = pointcloud->data[i];
+		if (p) {
+			if (init) {
+				b.minX = p->x;
+				b.maxX = p->x;
+				b.minY = p->y;
+				b.maxY = p->y;
+				b.minZ = p->z;
+				b.maxZ = p->z;
+				init = false;
+			} else {
+				if (p->x < b.minX) b.minX = p->x;
+				if (p->x > b.maxX) b.maxX = p->x;
+				if (p->y < b.minY) b.minY = p->y;
+				if (p->y > b.maxY) b.maxY = p->y;
+				if (p->z < b.minZ) b.minZ = p->z;
+				if (p->z > b.maxZ) b.maxZ = p->z;
+			}
+		}
+	}
+	return b;
+}
+
 void getPCA_XY(HPCD* pointcloud) {
 	double cov[4] = {}; //column major
 	double center[3];
@@ -129,6 +162,7 @@ void getPCA_XY(HPCD* pointcloud) {
 			p->z -= center[2];
 		}
 	}
+	pointcloud->oriented_box = getBoundingBox(pointcloud);
 	//fix direction of major axis
 	int frontMinX=pointcloud->numGrid;
 	int frontMaxX=0;
@@ -506,10 +540,12 @@ void HPCD_delete(HPCD* cloud) {
 	delete cloud;
 }
 
-void equalize(std::vector<float> *data, int numBins, float* hist) {
-	float mx = data->at(0);
-	for (unsigned int i=1;i<data->size();i++) {
-		if (data->at(i) > mx) mx = data->at(i);
+void equalize(std::vector<float> *data, int numBins, float* hist, float mx) {
+	if (mx < 0) {
+		mx = data->at(0);
+		for (unsigned int i=1;i<data->size();i++) {
+			if (data->at(i) > mx) mx = data->at(i);
+		}
 	}
 	float scale = 1.0 * numBins / mx;
 	for (unsigned int i=0;i<data->size();i++) {
@@ -562,12 +598,35 @@ std::vector<float> getHistogram(HPCD* cloud) {
 		angle_data.push_back(angle(c,a,b));
 		area_data.push_back(area);
 	}
-//	hist.resize(numBins*3,0);
-//	equalize(&angle_data,numBins,&hist[0]);
-//	equalize(&area_data,numBins,&hist[numBins]);
-//	equalize(&distance_data,numBins,&hist[2*numBins]);
+	float dx = cloud->oriented_box.maxX - cloud->oriented_box.minX;
+	float dy = cloud->oriented_box.maxY - cloud->oriented_box.minY;
+	float dz = cloud->oriented_box.maxZ - cloud->oriented_box.minZ;
+	std::vector<float> dv;
+	dv.push_back(dx);
+	dv.push_back(dy);
+	dv.push_back(dz);
+	std::sort(dv.begin(),dv.end());
+	float global_distance = sqrt(dx*dx + dy*dy + dz*dz);
+	float global_area = 0.5 * dv[2] * sqrt(dv[0]*dv[0] + dv[1]*dv[1]); 
+#if REDUCED_FEATURE
 	hist.resize(numBins,0);
-	equalize(&distance_data,numBins,&hist[0]);
+#if GLOBAL_NORM
+	equalize(&distance_data,numBins,&hist[0],global_distance);
+#else
+	equalize(&distance_data,numBins,&hist[0],-1);
+#endif
+#else
+	hist.resize(numBins*3,0);
+#if GLOBAL_NORM
+	equalize(&angle_data,numBins,&hist[0],M_PI);
+	equalize(&area_data,numBins,&hist[numBins],global_area);
+	equalize(&distance_data,numBins,&hist[2*numBins],global_distance);
+#else
+	equalize(&angle_data,numBins,&hist[0],-1);
+	equalize(&area_data,numBins,&hist[numBins],-1);
+	equalize(&distance_data,numBins,&hist[2*numBins],-1);
+#endif
+#endif
 	delete[] pointdata;
 	return hist;
 }
@@ -615,8 +674,11 @@ std::vector<float> getDensity(HPCD* cloud) {
 std::vector<float> getAssemblyHistogram(std::vector<HPCD> assembly) {
 	std::vector<float> histN;
 	for (size_t i=0;i<assembly.size();i++) {
+#if USE_DENSITY
+		std::vector<float> hist = getDensity(&assembly[i]);
+#else
 		std::vector<float> hist = getHistogram(&assembly[i]);
-//		std::vector<float> hist = getDensity(&assembly[i]);
+#endif
 		histN.insert(histN.end(),hist.begin(),hist.end());
 	}
 	return histN;
@@ -650,16 +712,21 @@ void writeHistogram(char* fileName,std::vector<float> hist) {
 std::vector<HPCD> make_part(HPCD* cloud) {
 	std::vector<HPCD> assembly;
 	std::vector< std::vector<HPoint*> > points;
-	points.resize(5);
+	points.resize(NUM_PARTS);
 	for (int i=0;i<cloud->maxSize;i++) {
 		HPoint *h = cloud->data[i];
 		if (h) {
 			bool fb = h->x >= 0;
 			bool lr = h->y >= 0;
 			bool ud = h->z >= 0;
-//			points[(ud<<2)|(lr<<1)|fb].push_back(h);
-			points[(ud<<1)|fb].push_back(h);
-			points[4].push_back(h);
+			if (points.size() >= 8)
+				points[(ud<<2)|(lr<<1)|fb].push_back(h);
+			else if (points.size() >= 4)
+				points[(ud<<1)|fb].push_back(h);
+			else if (points.size() >= 2)
+				points[fb].push_back(h);
+			if (points.size() % 2 == 1)
+				points[points.size() - 1].push_back(h);
 		}
 	}
 	for (unsigned int i=0;i<points.size();i++) {
@@ -681,7 +748,7 @@ int main(int argc, char* argv[]) {
 
 //	srand(time(NULL));
 	srand(0);
-	int numGrid = 64;
+	int numGrid = 200;
 	std::vector<float> float_data;
 	HPCD* cloud = HPCD_Init(argv[1],numGrid,NULL,&float_data);
 	if (!cloud) {
