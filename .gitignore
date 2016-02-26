@@ -50,6 +50,7 @@ tools/*
 !tools/vizNeighbors.cpp
 !tools/template_alignment.cpp
 !tools/alignment_prerejective.cpp
+!tools/rgb.cpp
 !tools/vfh.cpp
 !tools/our_cvfh.cpp
 !tools/rsd.h

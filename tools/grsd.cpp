@@ -1,6 +1,6 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/normal_3d.h>
-#include "pcl/features/grsd.h"
+#include "grsd.h"
  
 int main(int argc, char** argv) {
 	// Object for storing the point cloud.

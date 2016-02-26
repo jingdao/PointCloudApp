@@ -24,21 +24,28 @@ script_dir=/home/jd/Documents/PointCloudApp/kitti
 #cad_dir=/home/jd/Documents/PointCloudApp/cloud/psb/combined
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/mixed
 ESFO=/home/jd/Documents/PointCloudApp/tools/esf
+VFH=/home/jd/Documents/PointCloudApp/tools/vfh
+OURCVFH=/home/jd/Documents/PointCloudApp/tools/our_cvfh
+GRSD=/home/jd/Documents/PointCloudApp/tools/grsd
 ESFC=/home/jd/Documents/PointCloudApp/esfc
-ESF=$ESFC
+ESF=$ESFO
 
 useCAD=true
-computeDescriptors=true
+computeDescriptors=false
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
 combineAssembly=false
+assemblies="{3,4}"
+#assemblies="3"
 
 knnOption=false
 ldaOption=false
 lrOption=false
 bayesOption=false
-svcOption=true
+svcOption=false
+adaboostOption=false
+decisionTreeOption=true
 savePointCloud=false
 kernel=0
 svm_type=0
@@ -64,7 +71,7 @@ then
 			numLines=`cat $cad_dir/labels.txt | wc -l`
 			for j in `seq 0 $((numLines-1))`
 			do
-				~/Documents/PointCloudApp/cloud/concat_esf.py $cad_dir/$j-cloud.pcd-{0,1,2}-part.pcd-esf.pcd $cad_dir/$j-cloud.pcd-esf.pcd
+				eval ~/Documents/PointCloudApp/cloud/concat_esf.py $cad_dir/$j-cloud.pcd-$assemblies-part.pcd-esf.pcd $cad_dir/$j-cloud.pcd-esf.pcd
 			done
 		else
 			for j in $cad_dir/*-cloud.pcd
@@ -94,7 +101,7 @@ else
 				numLines=`cat $input_dir/clusters$i/labels.txt | wc -l`
 				for j in `seq 0 $((numLines-1))`
 				do
-					~/Documents/PointCloudApp/cloud/concat_esf.py $input_dir/clusters$i/$j-cloud.pcd-{0,1,2}-part.pcd-esf.pcd $input_dir/clusters$i/$j-cloud.pcd-esf.pcd
+					eval ~/Documents/PointCloudApp/cloud/concat_esf.py $input_dir/clusters$i/$j-cloud.pcd-$assemblies-part.pcd-esf.pcd $input_dir/clusters$i/$j-cloud.pcd-esf.pcd
 				done
 			else
 				for j in $input_dir/clusters$i/*-cloud.pcd
@@ -127,7 +134,7 @@ then
 			numLines=`cat $output_dir/clusters$i/labels.txt | wc -l`
 			for j in `seq 0 $((numLines-1))`
 			do
-				~/Documents/PointCloudApp/cloud/concat_esf.py $output_dir/clusters$i/$j-cloud.pcd-{0,1,2}-part.pcd-esf.pcd $output_dir/clusters$i/$j-cloud.pcd-esf.pcd
+				eval ~/Documents/PointCloudApp/cloud/concat_esf.py $output_dir/clusters$i/$j-cloud.pcd-$assemblies-part.pcd-esf.pcd $output_dir/clusters$i/$j-cloud.pcd-esf.pcd
 			done
 		else
 			for j in $output_dir/clusters$i/*-cloud.pcd
@@ -197,6 +204,12 @@ then
 elif $svcOption
 then
 	$script_dir/svc.py $output_dir
+elif $adaboostOption
+then
+	$script_dir/adaboost.py $output_dir
+elif $decisiontreeOption
+then
+	$script_dir/decision_tree.py $output_dir
 else
 	#train classifier
 	if $parameterOption

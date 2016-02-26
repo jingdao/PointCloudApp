@@ -5,8 +5,9 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/esf.h>
 #include <vector>
-#define NUM_BINS 256
+#define NUM_BINS 64
 
 void colormap (float f,unsigned char *r,unsigned char *g,unsigned char *b) {
 	*r=0;
@@ -31,27 +32,54 @@ void colormap (float f,unsigned char *r,unsigned char *g,unsigned char *b) {
 	}
 }
 
-std::vector<float> histeq(std::vector<float> val) {
-	int count[NUM_BINS];
-	memset(count,0,NUM_BINS*sizeof(int));
+std::vector<float> histeq(std::vector<float> val, std::vector<float> *count) {
+	count->resize(NUM_BINS);
 	int totalCount=0;
 	for (size_t i=0;i<val.size();i++) {
 		if (val[i] > 0) {
-			count[(int)(val[i] * (NUM_BINS-1))]++;
+			(*count)[(int)(val[i] * (NUM_BINS-1))]++;
 			totalCount++;
 		}
 	}
 	for (int i=1;i<NUM_BINS;i++)
-		count[i] += count[i-1];
+		(*count)[i] += (*count)[i-1];
+	for (size_t i=0;i<NUM_BINS;i++) {
+		(*count)[i] /= totalCount;
+	}
 	std::vector<float> result;
 	for (size_t i=0;i<val.size();i++) {
-		float t = 1.0 * count[(int)(val[i] * (NUM_BINS-1))] / totalCount;
+		float t = 1.0 * (*count)[(int)(val[i] * (NUM_BINS-1))];
 		result.push_back(t);
 	}
-	for (size_t i=0;i<NUM_BINS;i++) {
-		printf("%d\n",count[i]);
+	for (size_t i=NUM_BINS;i>=1;i--) {
+		(*count)[i] -= (*count)[i-1];
 	}
 	return result;
+}
+
+void writeHistogram(char* fileName,std::vector<float> hist) {
+	FILE* f = fopen(fileName,"w");
+	if (!f)
+		return;
+	fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
+		"VERSION 0.7\n"
+		"FIELDS esf\n"
+		"SIZE 4\n"
+		"TYPE F\n"
+		"COUNT %lu\n"
+		"WIDTH 1\n"
+		"HEIGHT 1\n"
+		"VIEWPOINT 0 0 0 1 0 0 0\n"
+		"POINTS 1\n"
+		"DATA ascii\n",hist.size());
+	for (unsigned int i=0;i<hist.size();i++) {
+		fprintf(f,"%f ",hist[i]);
+	}
+	fprintf(f,"\n");
+#if VERBOSE
+	printf("Wrote %lu-bin histogram to %s\n",hist.size(),fileName);
+#endif
+	fclose(f);
 }
 
 int main(int argc, char** argv) {
@@ -73,6 +101,7 @@ int main(int argc, char** argv) {
 	std::vector<float> curvatures;
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
 	float maxc,minc;
+	std::vector<float> count;
 
 	for (size_t i=0;i<object->points.size();i++) {
 		float nx,ny,nz,curv;
@@ -89,7 +118,7 @@ int main(int argc, char** argv) {
 	for (size_t i=0;i<curvatures.size();i++) {
 		curvatures[i] = (curvatures[i] - minc) / (maxc - minc);
 	} 
-	curvatures = histeq(curvatures);
+	curvatures = histeq(curvatures,&count);
 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr output (new pcl::PointCloud<pcl::PointXYZRGB>);
 	output->width = object->points.size();
@@ -104,4 +133,18 @@ int main(int argc, char** argv) {
 	}
 	pcl::PCDWriter writer;
 	writer.write<pcl::PointXYZRGB> (outputFile, *output, false); //*
+
+	sprintf(outputFile,"%s-esf.pcd",argv[1]);
+	pcl::PointCloud<pcl::ESFSignature640>::Ptr descriptors(new pcl::PointCloud<pcl::ESFSignature640>);
+	pcl::ESFEstimation<pcl::PointXYZ, pcl::ESFSignature640> esf;
+	esf.setInputCloud(object);
+	esf.compute(*descriptors);
+	std::vector<float> hist;
+	for (int i=0;i<640;i++) {
+		hist.push_back(descriptors->points[0].histogram[i]);
+	}
+	for (size_t i=0;i<count.size();i++) {
+		hist.push_back(count[i]);
+	}
+	writeHistogram(outputFile,hist);
 }
