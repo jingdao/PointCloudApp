@@ -12,10 +12,11 @@
 #define PROFILE 0
 #define SAVE_ASSEMBLY 1
 #define VERBOSE 0
-#define NUM_PARTS 5
+#define NUM_PARTS 1
 #define REDUCED_FEATURE 1
-#define USE_DENSITY 0
+#define USE_DENSITY 1
 #define GLOBAL_NORM 0
+#define DENSITY_GRID 7
 
 enum PCD_data_storage {
 	ASCII,
@@ -42,6 +43,10 @@ struct HPCD {
 	HPoint** data;
 	bool hasColor;
 	Box oriented_box;
+};
+
+struct Dimensions {
+	int length,width,height;
 };
 
 inline float distance(HPoint a,HPoint b) {
@@ -162,7 +167,6 @@ void getPCA_XY(HPCD* pointcloud) {
 			p->z -= center[2];
 		}
 	}
-	pointcloud->oriented_box = getBoundingBox(pointcloud);
 	//fix direction of major axis
 	int frontMinX=pointcloud->numGrid;
 	int frontMaxX=0;
@@ -176,10 +180,13 @@ void getPCA_XY(HPCD* pointcloud) {
 	int backMaxY=-pointcloud->numGrid;
 	int backMinZ=pointcloud->numGrid;
 	int backMaxZ=-pointcloud->numGrid;
+	int numFront = 0;
+	int numBack = 0;
 	for (int j=0;j<pointcloud->maxSize;j++) {
 		HPoint *p = pointcloud->data[j];
 		if (p) {
 			if (p->x > 0) {
+				numFront++;
 				if (abs(p->x) > frontMaxX) frontMaxX = abs(p->x);
 				if (abs(p->x) < frontMinX) frontMinX = abs(p->x);
 				if (p->y > frontMaxY) frontMaxY = p->y;
@@ -187,6 +194,7 @@ void getPCA_XY(HPCD* pointcloud) {
 				if (p->z > frontMaxZ) frontMaxZ = p->z;
 				if (p->z < frontMinZ) frontMinZ = p->z;
 			} else {
+				numBack++;
 				if (abs(p->x) > backMaxX) backMaxX = abs(p->x);
 				if (abs(p->x) < backMinX) backMinX = abs(p->x);
 				if (p->y > backMaxY) backMaxY = p->y;
@@ -198,7 +206,7 @@ void getPCA_XY(HPCD* pointcloud) {
 	}
 	int frontVolume = (frontMaxX-frontMinX) * (frontMaxY-frontMinY) * (frontMaxZ-frontMinZ);
 	int backVolume = (backMaxX-backMinX) * (backMaxY-backMinY) * (backMaxZ-backMinZ);
-	if (frontVolume > backVolume) {
+	if (frontVolume > backVolume /*&& numFront > numBack*/) {
 		for (int j=0;j<pointcloud->maxSize;j++) {
 			HPoint *p = pointcloud->data[j];
 			if (p) {
@@ -206,6 +214,7 @@ void getPCA_XY(HPCD* pointcloud) {
 			}
 		}
 	}
+	pointcloud->oriented_box = getBoundingBox(pointcloud);
 }
 
 inline int getIntKey(int x,int y,int z) {
@@ -606,11 +615,10 @@ std::vector<float> getHistogram(HPCD* cloud) {
 	dv.push_back(dy);
 	dv.push_back(dz);
 	std::sort(dv.begin(),dv.end());
-	float global_distance = sqrt(dx*dx + dy*dy + dz*dz);
-	float global_area = 0.5 * dv[2] * sqrt(dv[0]*dv[0] + dv[1]*dv[1]); 
 #if REDUCED_FEATURE
 	hist.resize(numBins,0);
 #if GLOBAL_NORM
+	float global_distance = sqrt(dx*dx + dy*dy + dz*dz);
 	equalize(&distance_data,numBins,&hist[0],global_distance);
 #else
 	equalize(&distance_data,numBins,&hist[0],-1);
@@ -618,6 +626,8 @@ std::vector<float> getHistogram(HPCD* cloud) {
 #else
 	hist.resize(numBins*3,0);
 #if GLOBAL_NORM
+	float global_distance = sqrt(dx*dx + dy*dy + dz*dz);
+	float global_area = 0.5 * dv[2] * sqrt(dv[0]*dv[0] + dv[1]*dv[1]); 
 	equalize(&angle_data,numBins,&hist[0],M_PI);
 	equalize(&area_data,numBins,&hist[numBins],global_area);
 	equalize(&distance_data,numBins,&hist[2*numBins],global_distance);
@@ -631,42 +641,54 @@ std::vector<float> getHistogram(HPCD* cloud) {
 	return hist;
 }
 
-std::vector<float> getDensity(HPCD* cloud) {
+std::vector<float> getDensity(HPCD* cloud,Dimensions *dim) {
 	std::vector<int> density;
 	std::vector<float> hist;
-	int numGrid = 2;
-	density.resize(numGrid * numGrid * numGrid);
-	int* pointdata = new int[cloud->numPoints*3];
-	int k=0;
-	for (int j=0;j<cloud->maxSize;j++) {
-		if (cloud->data[j]) {
-			pointdata[k++] = cloud->data[j]->x;
-			pointdata[k++] = cloud->data[j]->y;
-			pointdata[k++] = cloud->data[j]->z;
+	Box b = cloud->oriented_box;
+	int gridscale[3];
+	float gridLength[3] = {
+		b.maxX - b.minX,
+		b.maxY - b.minY,
+		b.maxZ - b.minZ
+	};
+	int minIndex = 0;
+	float minDimension = (b.maxX - b.minX);
+	for (int i=1;i<3;i++) {
+		if (gridLength[i] < minDimension) {
+			minDimension = gridLength[i];
+			minIndex = i;
 		}
 	}
-	float minX = pointdata[0], maxX = pointdata[0];
-	float minY = pointdata[1], maxY = pointdata[1];
-	float minZ = pointdata[2], maxZ = pointdata[2];
-	for (int i=1;i<cloud->numPoints;i++) {
-		if (pointdata[i*3] < minX) minX = pointdata[i*3];
-		if (pointdata[i*3] > maxX) maxX = pointdata[i*3];
-		if (pointdata[i*3+1] < minY) minY = pointdata[i*3+1];
-		if (pointdata[i*3+1] > maxY) maxY = pointdata[i*3+1];
-		if (pointdata[i*3+2] < minZ) minZ = pointdata[i*3+2];
-		if (pointdata[i*3+2] > maxZ) maxZ = pointdata[i*3+2];
+	for (int i=0;i<3;i++) {
+		if (i==minIndex) {
+			gridscale[i] = DENSITY_GRID;
+		} else {
+			gridscale[i] = DENSITY_GRID * (gridLength[i] / minDimension);
+		}
 	}
-	float scaleX = 1.0 * (numGrid - 1) / (maxX - minX);
-	float scaleY = 1.0 * (numGrid - 1) / (maxY - minY);
-	float scaleZ = 1.0 * (numGrid - 1) / (maxZ - minZ);
-	for (int i=0;i<cloud->numPoints;i++) {
-		int xi = (int) ((pointdata[i*3] - minX) * scaleX);
-		int yi = (int) ((pointdata[i*3+1] - minY) * scaleY);
-		int zi = (int) ((pointdata[i*3+2] - minZ) * scaleZ);
-		density[xi + yi*numGrid + zi*numGrid*numGrid]++;
+	dim->length = gridscale[0];
+	dim->width = gridscale[1];
+	dim->height = gridscale[2];
+	density.resize(dim->length*dim->width*dim->height);
+	float scaleX = 1.0 * (gridscale[0] - 1) / gridLength[0];
+	float scaleY = 1.0 * (gridscale[1] - 1) / gridLength[1];
+	float scaleZ = 1.0 * (gridscale[2] - 1) / gridLength[2];
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* p = cloud->data[i];
+		if (p) {
+			int xi = (int) round((p->x - b.minX) * scaleX);
+			int yi = (int) round((p->y - b.minY) * scaleY);
+			int zi = (int) round((p->z - b.minZ) * scaleZ);
+			int pi = xi + yi*dim->length + zi*dim->width*dim->length;
+			density[pi]++;
+		}
 	}
 	for (size_t i=0;i<density.size();i++) {
-		hist.push_back(1.0 * density[i] / cloud->numPoints);
+		if (density[i])
+			hist.push_back(1.0 * density[i] / cloud->numPoints);
+		else {
+			hist.push_back(-1);
+		}
 	}
 	return hist;
 }
@@ -674,11 +696,7 @@ std::vector<float> getDensity(HPCD* cloud) {
 std::vector<float> getAssemblyHistogram(std::vector<HPCD> assembly) {
 	std::vector<float> histN;
 	for (size_t i=0;i<assembly.size();i++) {
-#if USE_DENSITY
-		std::vector<float> hist = getDensity(&assembly[i]);
-#else
 		std::vector<float> hist = getHistogram(&assembly[i]);
-#endif
 		histN.insert(histN.end(),hist.begin(),hist.end());
 	}
 	return histN;
@@ -706,6 +724,18 @@ void writeHistogram(char* fileName,std::vector<float> hist) {
 #if VERBOSE
 	printf("Wrote %lu-bin histogram to %s\n",hist.size(),fileName);
 #endif
+	fclose(f);
+}
+
+void writeOccupancyGrid(char* fileName,std::vector<float> hist,Dimensions dim) {
+	FILE* f = fopen(fileName,"w");
+	if (!f)
+		return;
+	fprintf(f,"%d %d %d\n",dim.length,dim.width,dim.height);
+	for (size_t i=0;i<hist.size();i++) {
+		fprintf(f,"%f ",hist[i]);
+	}
+	fprintf(f,"\n");
 	fclose(f);
 }
 
@@ -765,8 +795,15 @@ int main(int argc, char* argv[]) {
 	}
 #endif
 
+#if USE_DENSITY
+	Dimensions dim;
+	std::vector<float> density = getDensity(cloud,&dim);
+	sprintf(buffer,"%s.og",argv[1]);
+	writeOccupancyGrid(buffer,density,dim);
+#else
 	sprintf(buffer,"%s-esf.pcd",argv[1]);
 	writeHistogram(buffer,getAssemblyHistogram(assembly));
+#endif
 	HPCD_delete(cloud);
 	for (size_t i=0;i<assembly.size();i++) {
 		delete[] assembly[i].data;

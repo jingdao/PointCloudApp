@@ -64,6 +64,9 @@ scan_eval: scan_eval.cpp
 esfc: esfc.cpp
 	$(CXX) -ggdb3 -Wall -o $@ $< -llapack
 
+occ_grid: occ_grid.cpp
+	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU 
+
 debug: main
 
 single: all

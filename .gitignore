@@ -21,6 +21,7 @@
 !hpcd.cpp
 !scan_eval.cpp
 !esfc.cpp
+!occ_grid.cpp
 !plyheader
 !kitti
 kitti/*
@@ -37,10 +38,12 @@ kitti/*
 !kitti/logistic.py
 !kitti/bayes.py
 !kitti/cad_pipeline.sh
+!kitti/og_pipeline.sh
 !kitti/svc.py
 !kitti/decision_tree.py
 !kitti/boosting.py
 !kitti/adaboost.py
+!kitti/part_feature.py
 !tools
 tools/*
 !tools/esf.cpp
@@ -78,6 +81,7 @@ cloud/*
 !cloud/downsamplepcd.py
 !cloud/rotatepcd.py
 !cloud/concat_esf.py
+!cloud/filterpcd.py
 !obstruction
 obstruction/*
 !obstruction/process_bounding_box.py

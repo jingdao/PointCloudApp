@@ -438,12 +438,12 @@ HPCD* HPCD_Init_PTS(char* inFile,int numGrid,Box* box,std::vector<float> *float_
 		res->maxY = box->maxY;
 		res->minZ = box->minZ;
 		res->maxZ = box->maxZ;
-		float x,y,z;
+		float x,y,z,d;
 		unsigned char r,g,b;
 		for (int i=0;i<totalPoints;i++) {
 			if (!fgets(buf,256,f))
 				break;
-			if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+			if (!sscanf(buf, "%f %f %f %f %hhu %hhu %hhu",&x,&y,&z,&d,&r,&g,&b) == 7)
 				break;
 			if (x >= res->minX && x <= res->maxX &&
 			    y >= res->minY && y <= res->maxY &&
@@ -457,18 +457,18 @@ HPCD* HPCD_Init_PTS(char* inFile,int numGrid,Box* box,std::vector<float> *float_
 			}
 		}
 	} else {
-		float x,y,z;
+		float x,y,z,d;
 		unsigned char r,g,b;
 		if (!fgets(buf,256,f))
 			return NULL;
-		sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b);
+		sscanf(buf, "%f %f %f %f %hhu %hhu %hhu",&x,&y,&z,&d,&r,&g,&b);
 		res->minX = res->maxX = x;
 		res->minY = res->maxY = y;
 		res->minZ = res->maxZ = z;
 		for (int i=1;i<totalPoints;i++) {
 			if (!fgets(buf,256,f))
 				break;
-			if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+			if (!sscanf(buf, "%f %f %f %f %hhu %hhu %hhu",&x,&y,&z,&d,&r,&g,&b) == 7)
 				break;
 			if (x < res->minX) res->minX = x;
 			else if (x > res->maxX) res->maxX = x;
