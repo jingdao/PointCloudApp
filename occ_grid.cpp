@@ -14,7 +14,7 @@ struct Dimensions {
 	int length,width,height;
 };
 
-double cameraX=10,cameraY=0,cameraZ=20;
+double cameraX=20,cameraY=0,cameraZ=40;
 double centerX=0,centerY=0,centerZ=0;
 double upX=0,upY=0,upZ=1;
 int mouseIndex = 0;
@@ -78,6 +78,7 @@ void loadOccupancyGrid(char* fileName) {
 }
 
 void drawCube(float x,float y,float z) {
+	glBegin(GL_QUADS);
 	glVertex3d(x,y,z);
 	glVertex3d(x+1,y,z);
 	glVertex3d(x+1,y+1,z);
@@ -103,6 +104,13 @@ void drawCube(float x,float y,float z) {
 	glVertex3d(x+1,y+1,z);
 	glVertex3d(x+1,y+1,z+1);
 	glVertex3d(x+1,y,z+1);
+	glEnd();
+}
+
+void drawDot(float x,float y,float z) {
+	glBegin(GL_POINTS);
+	glVertex3d(x,y,z);
+	glEnd();
 }
 
 void draw() {
@@ -114,24 +122,30 @@ void draw() {
 	gluLookAt(cameraX,cameraY,cameraZ,centerX,centerY,centerZ,upX,upY,upZ);
 
 	//draw ground
+	int maxDimension = gridDimensions.length;
+	if (gridDimensions.width > maxDimension)
+		maxDimension = gridDimensions.width;
+	if (gridDimensions.height > maxDimension)
+		maxDimension = gridDimensions.height;
+	maxDimension /= 2;
 	glBegin(GL_QUADS);
 	glColor3ub(100,100,100);
-	glVertex3d(-10,-10,0);
-	glVertex3d(10,-10,0);
-	glVertex3d(10,10,0);
-	glVertex3d(-10,10,0);
+	glVertex3d(-maxDimension,-maxDimension,0);
+	glVertex3d(maxDimension,-maxDimension,0);
+	glVertex3d(maxDimension,maxDimension,0);
+	glVertex3d(-maxDimension,maxDimension,0);
 	glEnd();
 	glLineWidth(5.0);
 	glBegin(GL_LINES);
 	glColor3ub(255,0,0);
-	glVertex3d(-10,-10,0);
-	glVertex3d(10,-10,0);
+	glVertex3d(-maxDimension,-maxDimension,0);
+	glVertex3d(maxDimension,-maxDimension,0);
 	glColor3ub(0,255,0);
-	glVertex3d(-10,-10,0);
-	glVertex3d(-10,10,0);
+	glVertex3d(-maxDimension,-maxDimension,0);
+	glVertex3d(-maxDimension,maxDimension,0);
 	glColor3ub(0,0,255);
-	glVertex3d(-10,-10,0);
-	glVertex3d(-10,-10,20);
+	glVertex3d(-maxDimension,-maxDimension,0);
+	glVertex3d(-maxDimension,-maxDimension,2*maxDimension);
 	glEnd();
 
 	//draw object
@@ -152,7 +166,14 @@ void draw() {
 	} else {
 		zr=-1; zl=gridDimensions.height-1; zd=-1;
 	}
-	glBegin(GL_QUADS);
+
+	void (*draw3d)(float,float,float);
+	if (maxDimension >= 15) {
+		draw3d = drawDot;
+		glPointSize(2.0);
+	} else {
+		draw3d = drawCube;
+	}
 	for (int z=zl;z!=zr;z+=zd) {
 		for (int y=yl;y!=yr;y+=yd) {
 			for (int x=xl;x!=xr;x+=xd) {
@@ -160,19 +181,18 @@ void draw() {
 				int yi = y + (gridDimensions.width-1)/2;
 				int zi = z;
 				int gridIndex = xi + yi*gridDimensions.length + zi*gridDimensions.length*gridDimensions.width;
-				if (gridValue[gridIndex] >= 0) {
+				if (gridValue[gridIndex] > 0) {
 #if GRAYSCALE
 					graymap(gridValue[gridIndex],&r,&g,&b);
 #else
 					colormap(gridValue[gridIndex],&r,&g,&b);
 #endif
 					glColor3ub(r,g,b);
-					drawCube(x,y,z);
+					draw3d(x,y,z);
 				}
 			}
 		}
 	}
-	glEnd();
 
 	glFlush();
 	SDL_GL_SwapBuffers();
