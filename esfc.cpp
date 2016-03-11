@@ -16,7 +16,7 @@
 #define REDUCED_FEATURE 1
 #define USE_DENSITY 1
 #define GLOBAL_NORM 0
-#define DENSITY_GRID 7
+#define DENSITY_GRID 9
 
 enum PCD_data_storage {
 	ASCII,
@@ -684,11 +684,7 @@ std::vector<float> getDensity(HPCD* cloud,Dimensions *dim) {
 		}
 	}
 	for (size_t i=0;i<density.size();i++) {
-		if (density[i])
-			hist.push_back(1.0 * density[i] / cloud->numPoints);
-		else {
-			hist.push_back(-1);
-		}
+		hist.push_back(1.0 * density[i] / cloud->numPoints);
 	}
 	return hist;
 }
