@@ -99,7 +99,7 @@ def detectBoom(grid,length,width,height):
 		x += 1
 	return maxBoomElement
 
-def detectBoom2(grid,length,width,height):
+def sideToMid(grid,length,width,height):
 	leftCount=0
 	midCount=0
 	rightCount=0
@@ -128,10 +128,9 @@ def detectBoom2(grid,length,width,height):
 						rightCount2 += 1
 	m1 = 1.0 * (leftCount + rightCount) / midCount
 	m2 = 1.0 * (leftCount2 + rightCount2) / midCount2
-	return min(m1,m2), max(m1,m2)
+	return min(m1,m2) / max(m1,m2)
 
-
-def detectBoom3(grid,length,width,height):
+def frontToBack(grid,length,width,height):
 	frontCount=0
 	backCount=0
 	for x in range(length/2):
@@ -144,7 +143,7 @@ def detectBoom3(grid,length,width,height):
 			for y in range(width):
 				if grid[x][z][y] > 0:
 					frontCount += 1
-	return 1.0 * max(frontCount,backCount) / min(frontCount,backCount)
+	return 1.0 * min(frontCount,backCount) /max(frontCount,backCount) 
 
 def detectBucket(grid,length,width,height):
 	numBucketElement=0
@@ -155,7 +154,7 @@ def detectBucket(grid,length,width,height):
 				break
 	return numBucketElement > 0
 
-def detectBucket2(grid,length,width,height):
+def topToBottom(grid,length,width,height):
 	topCount1=0
 	bottomCount1=0
 	topCount2=0
@@ -182,9 +181,10 @@ def detectBucket2(grid,length,width,height):
 							topCount3+=1
 	t1 = topCount1 / (bottomCount1+1) * (bottomCount2+bottomCount3) / (topCount2 + topCount3)
 	t2 = topCount3 / (bottomCount3+1) * (bottomCount1+bottomCount2) / (topCount1 + topCount2)
-	return 1.0 * max(t1,t2) / (min(t1,t2) + 1)
+#	return 1.0 * max(t1,t2) / (min(t1,t2) + 1)
+	return min(t1,t2) / (max(t1,t2) + 1)
 
-def detectBucket3(grid,length,width,height):
+def midToFrontBack(grid,length,width,height):
 	frontCount=0
 	midCount=0
 	backCount=0
@@ -205,7 +205,7 @@ def detectBucket3(grid,length,width,height):
 					frontCount += 1
 	return 1.0 * midCount / (frontCount + backCount)
 	
-def detectBucket4(grid,length,width,height):
+def gradToPeak(grid,length,width,height):
 	maxheight=[0]*length
 	for x in range(length):
 		for z in range(height):
@@ -218,8 +218,19 @@ def detectBucket4(grid,length,width,height):
 		g[0]=np.polyfit(range(peak_id+1),maxheight[:peak_id+1],1)[0]
 	if peak_id < len(maxheight) - 1:
 		g[1]=np.polyfit(range(len(maxheight),peak_id,-1),maxheight[peak_id:],1)[0]
-	print g[0],g[1]
-	return max(g[0],g[1])
+	return min(g[0],g[1])/max(g[0],g[1])
+
+def distToPeak(grid,length,width,height):
+	maxheight=[0]*length
+	for x in range(length):
+		for z in range(height):
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					maxheight[x] = max(maxheight[x],z)
+	peak_id = np.argmax(maxheight)
+	p1 = 1.0 * peak_id / length
+	p2 = 1.0 * (length-peak_id) / length
+	return min(p1,p2)/max(p1,p2)
 
 def detectBackhoe(grid,length,width,height):
 	countTip=0
@@ -243,13 +254,14 @@ def detectBlade(grid,length,width,height):
 def getFeatures(grid,length,width,height):
 	criteria0 = 1.0 * length / min(width,height)
 	criteria1 = 1.0 * height / width
-	criteria2 = detectBoom(grid,length,width,height)
-	criteria3 = detectBoom3(grid,length,width,height)
-	criteria4,criteria5 = detectBoom2(grid,length,width,height)
-	criteria6 = detectBucket2(grid,length,width,height)
-	criteria7 = detectBucket3(grid,length,width,height)
-	criteria8 = detectBucket4(grid,length,width,height)
-#	criteria7 = detectBackhoe(grid,length,width,height)
+	criteria2 = frontToBack(grid,length,width,height)
+	criteria3 = midToFrontBack(grid,length,width,height)
+	criteria4 = sideToMid(grid,length,width,height)
+	criteria5 = topToBottom(grid,length,width,height)
+	criteria6 = gradToPeak(grid,length,width,height)
+	criteria7 = distToPeak(grid,length,width,height)
+
+#	criteria8 = detectBoom(grid,length,width,height)
 	return [
 		criteria0,
 		criteria1,
@@ -260,6 +272,7 @@ def getFeatures(grid,length,width,height):
 		criteria6,
 		criteria7,
 		criteria8,
+#		criteria9,
 	]
 
 def plotColoredRegion(x,y,colors,categories):
@@ -366,13 +379,13 @@ if __name__ == "__main__":
 			grid=[[[float(l[x+y*length+z*length*width]) for y in range(width)] for z in range(height)] for x in range(length)]
 			f.close()
 			lb = int(labels.readline())
-			sys.stdout.write(str(lb)+' ')
+#			sys.stdout.write(str(lb)+' ')
 			criteria = getFeatures(grid,length,width,height)
 			if not lb in c1.keys():
 				c1[lb]=[]
 				c2[lb]=[]
-			c1[lb].append(criteria[7])
-			c2[lb].append(criteria[8])
+			c1[lb].append(criteria[5])
+			c2[lb].append(criteria[6])
 #			if not lb==4 and not lb==3 and not lb==2:
 #			print i,lb,criteria
 			i += 1

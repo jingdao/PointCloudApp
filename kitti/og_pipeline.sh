@@ -10,7 +10,7 @@ clusterDir="clusters$(echo $seq_out | awk '{print $1;}')"
 svm_dir=/home/jd/Downloads/libsvm-3.20
 direct_clf=false
 scaleOption=true
-computeDescriptors=false
+computeDescriptors=true
 
 if $computeDescriptors
 then
@@ -73,9 +73,10 @@ else
 		cp $output_dir/svm_train_data.txt $output_dir/svm_test_scaled.txt
 		cp $output_dir/svm_test_data.txt $output_dir/svm_test_scaled.txt
 	fi
+#	~/Documents/PointCloudApp/kitti/knn.py 10 $output_dir/svm_train_scaled.txt $output_dir/svm_test_scaled.txt $output_dir/svm_prediction.txt
 	~/Documents/PointCloudApp/kitti/svc.py $output_dir
-#	~/Documents/PointCloudApp/kitti/adaboost.py $output_dir
-#	~/Documents/PointCloudApp/kitti/decision_tree.py $output_dir
+#	~/Documents/PointCloudApp/kitti/lda.py $output_dir
+#	~/Documents/PointCloudApp/kitti/logistic.py $output_dir
 	cat $output_dir/svm_prediction.txt | tail -n +2 > $output_dir/$clusterDir/prediction.txt
 fi
 

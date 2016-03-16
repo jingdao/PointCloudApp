@@ -14,7 +14,7 @@ inputFile = {'train':dr+'/svm_train_scaled.txt', 'test':dr+'/svm_test_scaled.txt
 outputFile = dr+'/svm_prediction.txt'
 use_linear = True
 plot_training_size = False
-plot_weights = False
+plot_weights = True
 
 #import data into matrix format
 features = {'train':[], 'test':[]}
@@ -96,7 +96,7 @@ if plot_weights:
 	import matplotlib.pyplot as plt
 	for i in range(len(svc.coef_)):
 		w = svc.coef_[i]
-		plt.plot(np.arange(len(w)),w,lw=2,color=colors[i])
+		plt.plot(np.arange(len(w)),w,lw=2,color=colors[i+1])
 	plt.legend(loc='upper left')
 	plt.show()
 
