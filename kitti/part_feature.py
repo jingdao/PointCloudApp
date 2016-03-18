@@ -23,41 +23,6 @@ def findSingleBlock(arr):
 		i += 1
 	return countBlocks
 
-def findDoubleBlock(arr):
-	countBlock1=0
-	countBlock2=0
-	countGap=0
-	i=0
-	while i<len(arr):
-		if countBlock1==0 and arr[i]>0:
-			countBlock1 += 1
-		elif countBlock1 > 0:
-			if arr[i] > 0:
-				countBlock1 += 1
-			else:
-				break
-		i += 1
-	while i<len(arr):
-		if countBlock2==0:
-			if arr[i] > 0:
-				countBlock2 += 1
-			else:
-				countGap += 1
-		elif countBlock2 > 0:
-			if arr[i] > 0:
-				countBlock2 += 1
-			else:
-				break
-		i += 1
-	while i<len(arr):
-		if arr[i] > 0:
-			return 0
-		i += 1
-	if countBlock1 > 0 and countBlock2 > 0:
-		return countGap
-	else:
-		return 0
-
 def find2DBlock(arr):
 	i=0
 	blocks=[]
@@ -81,24 +46,42 @@ def find2DBlock(arr):
 	else:
 		return max(blocks)
 
-def detectBoom(grid,length,width,height):
-	numBoomElement=0
-	maxBoomElement=0
-	x=0
-	boom_threshold = min(width,height) / 2
-	while x<length:
-		j = find2DBlock(grid[x])
-		if numBoomElement==0 and j>0 and j<boom_threshold:
-			numBoomElement += 1
-		elif numBoomElement > 0:
-			if j>0 and j<boom_threshold:
-				numBoomElement += 1
-				maxBoomElement = max(maxBoomElement,numBoomElement)
-			else:
-				numBoomElement = 0
-		x += 1
-	return maxBoomElement
+def frontToBack(grid,length,width,height):
+	frontCount=0
+	backCount=0
+	for x in range(length/2):
+		for z in range(height):
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					backCount += 1
+	for x in range(length/2,length):
+		for z in range(height):
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					frontCount += 1
+	return 1.0 * min(frontCount,backCount) /max(frontCount,backCount) 
 
+def midToFrontBack(grid,length,width,height):
+	frontCount=0
+	midCount=0
+	backCount=0
+	for x in range(length/3):
+		for z in range(height):
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					backCount += 1
+	for x in range(length/3,length*2/3):
+		for z in range(height):
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					midCount += 1
+	for x in range(length*2/3,length):
+		for z in range(height):
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					frontCount += 1
+	return 1.0 * midCount / (frontCount + backCount)
+	
 def sideToMid(grid,length,width,height):
 	leftCount=0
 	midCount=0
@@ -130,30 +113,6 @@ def sideToMid(grid,length,width,height):
 	m2 = 1.0 * (leftCount2 + rightCount2) / midCount2
 	return min(m1,m2) / max(m1,m2)
 
-def frontToBack(grid,length,width,height):
-	frontCount=0
-	backCount=0
-	for x in range(length/2):
-		for z in range(height):
-			for y in range(width):
-				if grid[x][z][y] > 0:
-					backCount += 1
-	for x in range(length/2,length):
-		for z in range(height):
-			for y in range(width):
-				if grid[x][z][y] > 0:
-					frontCount += 1
-	return 1.0 * min(frontCount,backCount) /max(frontCount,backCount) 
-
-def detectBucket(grid,length,width,height):
-	numBucketElement=0
-	for x in range(length):
-		for z in range(height-1):
-			if findSingleBlock(grid[x][z+1])>3 and findDoubleBlock(grid[x][z])>3 and findDoubleBlock(grid[x][z])<5:
-				numBucketElement += 1
-				break
-	return numBucketElement > 0
-
 def topToBottom(grid,length,width,height):
 	topCount1=0
 	bottomCount1=0
@@ -181,30 +140,8 @@ def topToBottom(grid,length,width,height):
 							topCount3+=1
 	t1 = topCount1 / (bottomCount1+1) * (bottomCount2+bottomCount3) / (topCount2 + topCount3)
 	t2 = topCount3 / (bottomCount3+1) * (bottomCount1+bottomCount2) / (topCount1 + topCount2)
-#	return 1.0 * max(t1,t2) / (min(t1,t2) + 1)
 	return min(t1,t2) / (max(t1,t2) + 1)
 
-def midToFrontBack(grid,length,width,height):
-	frontCount=0
-	midCount=0
-	backCount=0
-	for x in range(length/3):
-		for z in range(height):
-			for y in range(width):
-				if grid[x][z][y] > 0:
-					backCount += 1
-	for x in range(length/3,length*2/3):
-		for z in range(height):
-			for y in range(width):
-				if grid[x][z][y] > 0:
-					midCount += 1
-	for x in range(length*2/3,length):
-		for z in range(height):
-			for y in range(width):
-				if grid[x][z][y] > 0:
-					frontCount += 1
-	return 1.0 * midCount / (frontCount + backCount)
-	
 def gradToPeak(grid,length,width,height):
 	maxheight=[0]*length
 	for x in range(length):
@@ -232,24 +169,34 @@ def distToPeak(grid,length,width,height):
 	p2 = 1.0 * (length-peak_id) / length
 	return min(p1,p2)/max(p1,p2)
 
-def detectBackhoe(grid,length,width,height):
-	countTip=0
-	for x in range(length):
-		for y in range(width):
-			if grid[x][height-1][y] > 0:
-				countTip += 1
-	return countTip
+def detectBoom(grid,length,width,height):
+	numBoomElement=0
+	maxBoomElement=0
+	x=0
+	boom_threshold = min(width,height) / 2
+	while x<length:
+		j = find2DBlock(grid[x])
+		if numBoomElement==0 and j>0 and j<boom_threshold:
+			numBoomElement += 1
+		elif numBoomElement > 0:
+			if j>0 and j<boom_threshold:
+				numBoomElement += 1
+				maxBoomElement = max(maxBoomElement,numBoomElement)
+			else:
+				numBoomElement = 0
+		x += 1
+	return 1.0 * maxBoomElement / length
 
-def detectBlade(grid,length,width,height):
-	numBladeElement=0
+def detectBucket(grid,length,width,height):
+	numBucketElement=0
 	for x in range(length):
-		countVertical=0
+		isBucket=True
 		for z in range(height):
-			if findSingleBlock(grid[x][z])>2 and findSingleBlock(grid[x][z])<5:
-				countVertical += 1
-		if countVertical>2 and countVertical<5:
-			numBladeElement += 1
-	return numBladeElement >= 2
+			for y in range(width):
+				if grid[x][z][y] > 0:
+					isBucket = not z > height/2
+		numBucketElement += isBucket
+	return 1.0 * numBucketElement / length
 
 def getFeatures(grid,length,width,height):
 	criteria0 = 1.0 * length / min(width,height)
@@ -260,8 +207,8 @@ def getFeatures(grid,length,width,height):
 	criteria5 = topToBottom(grid,length,width,height)
 	criteria6 = gradToPeak(grid,length,width,height)
 	criteria7 = distToPeak(grid,length,width,height)
-
-#	criteria8 = detectBoom(grid,length,width,height)
+	criteria8 = detectBoom(grid,length,width,height)
+	criteria9 = detectBucket(grid,length,width,height)
 	return [
 		criteria0,
 		criteria1,
@@ -272,7 +219,7 @@ def getFeatures(grid,length,width,height):
 		criteria6,
 		criteria7,
 		criteria8,
-#		criteria9,
+		criteria9,
 	]
 
 def plotColoredRegion(x,y,colors,categories):
@@ -287,7 +234,7 @@ def plotColoredRegion(x,y,colors,categories):
 	xmax=np.max(xv) + 1
 	ymin=np.min(yv) - 1
 	ymax=np.max(yv) + 1
-	fillRegion=False
+	fillRegion=True
 	if fillRegion:
 		colormap={}
 		for c in colors.keys():
@@ -379,15 +326,12 @@ if __name__ == "__main__":
 			grid=[[[float(l[x+y*length+z*length*width]) for y in range(width)] for z in range(height)] for x in range(length)]
 			f.close()
 			lb = int(labels.readline())
-#			sys.stdout.write(str(lb)+' ')
 			criteria = getFeatures(grid,length,width,height)
 			if not lb in c1.keys():
 				c1[lb]=[]
 				c2[lb]=[]
-			c1[lb].append(criteria[5])
-			c2[lb].append(criteria[6])
-#			if not lb==4 and not lb==3 and not lb==2:
-#			print i,lb,criteria
+			c1[lb].append(criteria[0])
+			c2[lb].append(criteria[1])
 			i += 1
 		colors = {0:'#ffffff',1:'#ff0000',2:'#00ff00',3:'#0000ff',4:'#ffff00',5:'#ff00ff',6:'#00ffff'}
 		plotColoredRegion(c1,c2,colors,categories)

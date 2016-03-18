@@ -28,10 +28,10 @@ VFH=/home/jd/Documents/PointCloudApp/tools/vfh
 OURCVFH=/home/jd/Documents/PointCloudApp/tools/our_cvfh
 GRSD=/home/jd/Documents/PointCloudApp/tools/grsd
 ESFC=/home/jd/Documents/PointCloudApp/esfc
-ESF=$ESFO
+ESF=$GRSD
 
 useCAD=true
-computeDescriptors=false
+computeDescriptors=true
 scaleOption=true
 parameterOption=true
 ignoreZeroOption=true
@@ -43,9 +43,9 @@ knnOption=false
 ldaOption=false
 lrOption=false
 bayesOption=false
-svcOption=false
+svcOption=true
 adaboostOption=false
-decisionTreeOption=true
+decisionTreeOption=false
 savePointCloud=false
 kernel=0
 svm_type=0
@@ -181,8 +181,14 @@ echo "Initialize SVM: train=$(wc -l < $output_dir/svm_train_data.txt) test=$(wc 
 #scale data
 if $scaleOption
 then
-	$svm_dir/svm-scale -l 0 -u 1 -s $output_dir/range.txt $output_dir/svm_train_data.txt > $output_dir/svm_train_scaled.txt 2>/dev/null
-	$svm_dir/svm-scale -r $output_dir/range.txt $output_dir/svm_test_data.txt > $output_dir/svm_test_scaled.txt 2>/dev/null
+	if [ $ESF == $VFH ] || [ $ESF == $GRSD ]
+	then
+		$svm_dir/svm-scale -l 0 -u 1 -s $output_dir/range.txt $output_dir/svm_train_data.txt > $output_dir/svm_train_scaled.txt 2>/dev/null
+		$svm_dir/svm-scale -l 0 -u 1 -s $output_dir/range.txt $output_dir/svm_test_data.txt > $output_dir/svm_test_scaled.txt 2>/dev/null
+	else
+		$svm_dir/svm-scale -l 0 -u 1 -s $output_dir/range.txt $output_dir/svm_train_data.txt > $output_dir/svm_train_scaled.txt 2>/dev/null
+		$svm_dir/svm-scale -r $output_dir/range.txt $output_dir/svm_test_data.txt > $output_dir/svm_test_scaled.txt 2>/dev/null
+	fi
 else
 	cp $output_dir/svm_train_data.txt $output_dir/svm_test_scaled.txt
 	cp $output_dir/svm_test_data.txt $output_dir/svm_test_scaled.txt

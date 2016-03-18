@@ -1,5 +1,6 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/filters/voxel_grid.h>
 #include "grsd.h"
  
 int main(int argc, char** argv) {
@@ -19,11 +20,18 @@ int main(int argc, char** argv) {
 
 	// Note: you would usually perform downsampling now. It has been omitted here
 	// for simplicity, but be aware that computation can take a long time.
+	double lsize = 5.0;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::VoxelGrid<pcl::PointXYZ> vg;
+	vg.setInputCloud(cloud);
+	vg.setLeafSize(lsize,lsize,lsize);
+	vg.filter(*cloud_filtered);
+	cloud = cloud_filtered;
 
 	// Estimate the normals.
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimation;
 	normalEstimation.setInputCloud(cloud);
-	normalEstimation.setRadiusSearch(0.03);
+	normalEstimation.setRadiusSearch(lsize);
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
 	normalEstimation.setSearchMethod(kdtree);
 	normalEstimation.compute(*normals);
@@ -35,11 +43,12 @@ int main(int argc, char** argv) {
 	grsd.setSearchMethod(kdtree);
 	// Search radius, to look for neighbors. Note: the value given here has to be
 	// larger than the radius used to estimate the normals.
-	grsd.setRadiusSearch(0.05);
+	grsd.setRadiusSearch(lsize * 1.7);
 
 	grsd.compute(*descriptors);
 	if (descriptors->points.size() > 0) {
 		pcl::PCDWriter writer;
 		writer.write<pcl::GRSDSignature21> (outputFile, *descriptors, false);
+//		printf("Saved to %s\n",outputFile);
 	}
 }
