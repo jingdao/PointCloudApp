@@ -689,6 +689,232 @@ std::vector<float> getDensity(HPCD* cloud,Dimensions *dim) {
 	return hist;
 }
 
+float getGradient(float* A, int n) {
+	if (n < 2)
+		return -1;
+	float sx=0,sy=0,sxx=0,sxy=0;
+	for (int i=0;i<n;i++) {
+		sx += i;
+		sy += A[i];
+		sxx += i * i;
+		sxy += i * A[i];
+	}
+	float g = (sxy - sx * sy / n) / (sxx - sx * sx / n);
+	return fabs(g);
+}
+
+std::vector<float> getPartFeature(HPCD* cloud) {
+	std::vector< std::vector< std::vector<bool> > > density;
+	std::vector<float> feature;
+	Dimensions dim;
+	Box b = cloud->oriented_box;
+	int gridscale[3];
+	float gridLength[3] = {
+		b.maxX - b.minX,
+		b.maxY - b.minY,
+		b.maxZ - b.minZ
+	};
+	int minIndex = 0;
+	float minDimension = (b.maxX - b.minX);
+	for (int i=1;i<3;i++) {
+		if (gridLength[i] < minDimension) {
+			minDimension = gridLength[i];
+			minIndex = i;
+		}
+	}
+	for (int i=0;i<3;i++) {
+		if (i==minIndex) {
+			gridscale[i] = DENSITY_GRID;
+		} else {
+			gridscale[i] = DENSITY_GRID * (gridLength[i] / minDimension);
+		}
+	}
+	dim.length = gridscale[0];
+	dim.width = gridscale[1];
+	dim.height = gridscale[2];
+	density.resize(dim.length);
+	for (int i=0;i<dim.length;i++) {
+		density[i].resize(dim.height);
+		for (int j=0;j<dim.height;j++) {
+			density[i][j].resize(dim.width);
+		}
+	}
+	float scaleX = 1.0 * (gridscale[0] - 1) / gridLength[0];
+	float scaleY = 1.0 * (gridscale[1] - 1) / gridLength[1];
+	float scaleZ = 1.0 * (gridscale[2] - 1) / gridLength[2];
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* p = cloud->data[i];
+		if (p) {
+			int xi = (int) round((p->x - b.minX) * scaleX);
+			int yi = (int) round((p->y - b.minY) * scaleY);
+			int zi = (int) round((p->z - b.minZ) * scaleZ);
+			density[xi][zi][yi] = true;
+		}
+	}
+	//Dimensional Variation
+	if (dim.width < dim.height)
+		feature.push_back(1.0 * dim.length / dim.width);
+	else
+		feature.push_back(1.0 * dim.length / dim.height);
+	feature.push_back(1.0 * dim.height / dim.width);
+	//Occupancy Distribution
+	int frontCount=0,backCount=0;
+	for (int x=0;x<dim.length;x++) {
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				if (x < dim.length / 2)
+					backCount += density[x][z][y];
+				else
+					frontCount += density[x][z][y];
+			}
+		}
+	}
+	if (frontCount < backCount)
+		feature.push_back(1.0 * frontCount / backCount);
+	else
+		feature.push_back(1.0 * backCount / frontCount);
+	int midCount=0; frontCount=0; backCount=0;
+	for (int x=0;x<dim.length;x++) {
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				if (x < dim.length / 3)
+					backCount += density[x][z][y];
+				else if (x < dim.length * 2 / 3)
+					midCount += density[x][z][y];
+				else
+					frontCount += density[x][z][y];
+			}
+		}
+	}
+	feature.push_back(1.0 * midCount / (frontCount + backCount));
+	int leftCount=0,rightCount=0,leftCount2=0,midCount2=0,rightCount2=0;midCount=0;
+	for (int x=0;x<dim.length;x++) {
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				if (x < dim.length / 2) {
+					if (y < dim.width / 3)
+						leftCount += density[x][z][y];
+					else if (y < dim.width * 2 / 3)
+						midCount += density[x][z][y];
+					else
+						rightCount += density[x][z][y];
+				} else {
+					if (y < dim.width / 3)
+						leftCount2 += density[x][z][y];
+					else if (y < dim.width * 2 / 3)
+						midCount2 += density[x][z][y];
+					else
+						rightCount2 += density[x][z][y];
+				}
+			}
+		}
+	}
+	float m1 = 1.0 * (leftCount + rightCount) / midCount;
+	float m2 = 1.0 * (leftCount2 + rightCount2) / midCount2;
+	if (m1 < m2)
+		feature.push_back(m1 / m2);
+	else
+		feature.push_back(m2 / m1);
+	int topCount1=0,topCount2=0,topCount3=0;
+	int bottomCount1=0,bottomCount2=0,bottomCount3=0;
+	for (int x=0;x<dim.length;x++) {
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				if (z < dim.height / 2) {
+					if (x < dim.length / 3)
+						bottomCount1 += density[x][z][y];
+					else if (x < dim.length * 2 / 3)
+						bottomCount2 += density[x][z][y];
+					else
+						bottomCount3 += density[x][z][y];
+				} else {
+					if (x < dim.length / 3)
+						topCount1 += density[x][z][y];
+					else if (x < dim.length * 2 / 3)
+						topCount2 += density[x][z][y];
+					else
+						topCount3 += density[x][z][y];
+				}
+			}
+		}
+	}
+	m1 = topCount1/(bottomCount1+1)*(bottomCount2+bottomCount3)/(topCount2+topCount3);
+	m2 = topCount3/(bottomCount3+1)*(bottomCount1+bottomCount2)/(topCount1+topCount2);
+	if (m1 < m2)
+		feature.push_back(m1 / (m2+1));
+	else
+		feature.push_back(m2 / (m1+1));
+	//Shape Profile
+	std::vector<float> maxheight;
+	maxheight.resize(dim.length);
+	for (int x=0;x<dim.length;x++) {
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				if (density[x][z][y] && z > maxheight[x])
+					maxheight[x] = z;
+			}
+		}
+	}
+	float peak_value = maxheight[0];
+	int peak_id = 0;
+	for (int x=1;x<dim.length;x++) {
+		if (maxheight[x] > peak_value) {
+			peak_value = maxheight[x];
+			peak_id = x;
+		}
+	}
+	m1 = getGradient(maxheight.data(),peak_id+1);
+	m2 = getGradient(maxheight.data()+peak_id,dim.length-peak_id);
+	if (m1 == -1 || m2 == -1)
+		feature.push_back(0);
+	else if (m1 < m2)
+		feature.push_back(m1 / m2);
+	else
+		feature.push_back(m2 / m1);
+	m1 = 1.0 * peak_id / dim.length;
+	m2 = 1.0 * (dim.length - peak_id) / dim.length;
+	if (m1 < m2)
+		feature.push_back(m1 / m2);
+	else
+		feature.push_back(m2 / m1);
+	//Component Detection
+	int numBoomElement=0,maxBoomElement=0,boom_threshold;
+	if (dim.width < dim.height)
+		boom_threshold = dim.width / 2;
+	else
+		boom_threshold = dim.height / 2;
+	for (int x=0;x<dim.length;x++) {
+		int j=0;
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				j += density[x][z][y];
+			}
+		}
+		if (numBoomElement==0 && j < boom_threshold)
+			numBoomElement++;
+		else if (j < boom_threshold) {
+			numBoomElement++;
+			if (numBoomElement > maxBoomElement)
+				maxBoomElement = numBoomElement;
+		} else
+			numBoomElement = 0;
+	}
+	feature.push_back(1.0 * numBoomElement / dim.length);
+	int numBucketElement=0;
+	for (int x=0;x<dim.length;x++) {
+		bool isBucket=true;
+		for (int z=0;z<dim.height;z++) {
+			for (int y=0;y<dim.width;y++) {
+				if (density[x][z][y])
+					isBucket = z <= dim.height/2;
+			}
+		}
+		numBucketElement += isBucket;
+	}
+	feature.push_back(1.0 * numBucketElement / dim.length);
+	return feature;
+}
+
 std::vector<float> getAssemblyHistogram(std::vector<HPCD> assembly) {
 	std::vector<float> histN;
 	for (size_t i=0;i<assembly.size();i++) {
@@ -783,6 +1009,7 @@ int main(int argc, char* argv[]) {
 //	HPCD_resize(cloud);
 	getPCA_XY(cloud);
 	char buffer[128];
+#if NUM_PARTS > 1
 	std::vector<HPCD> assembly = make_part(cloud);
 #if SAVE_ASSEMBLY
 	for (size_t i=0;i<assembly.size();i++) {
@@ -790,18 +1017,23 @@ int main(int argc, char* argv[]) {
 		HPCD_write(buffer,&assembly[i]);
 	}
 #endif
+#endif
 
 #if USE_DENSITY
-	Dimensions dim;
-	std::vector<float> density = getDensity(cloud,&dim);
-	sprintf(buffer,"%s.og",argv[1]);
-	writeOccupancyGrid(buffer,density,dim);
+//	Dimensions dim;
+//	std::vector<float> density = getDensity(cloud,&dim);
+//	sprintf(buffer,"%s.og",argv[1]);
+//	writeOccupancyGrid(buffer,density,dim);
+	sprintf(buffer,"%s-esf.pcd",argv[1]);
+	writeHistogram(buffer,getPartFeature(cloud));
 #else
 	sprintf(buffer,"%s-esf.pcd",argv[1]);
 	writeHistogram(buffer,getAssemblyHistogram(assembly));
 #endif
 	HPCD_delete(cloud);
+#if NUM_PARTS > 1
 	for (size_t i=0;i<assembly.size();i++) {
 		delete[] assembly[i].data;
 	}
+#endif
 }
