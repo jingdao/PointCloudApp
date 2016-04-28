@@ -137,13 +137,13 @@ void draw() {
 	glEnd();
 	glLineWidth(5.0);
 	glBegin(GL_LINES);
-	glColor3ub(255,0,0);
+	glColor3ub(150,150,150);
 	glVertex3d(-maxDimension,-maxDimension,0);
 	glVertex3d(maxDimension,-maxDimension,0);
-	glColor3ub(0,255,0);
+	glColor3ub(150,150,150);
 	glVertex3d(-maxDimension,-maxDimension,0);
 	glVertex3d(-maxDimension,maxDimension,0);
-	glColor3ub(0,0,255);
+	glColor3ub(150,150,150);
 	glVertex3d(-maxDimension,-maxDimension,0);
 	glVertex3d(-maxDimension,-maxDimension,2*maxDimension);
 	glEnd();
@@ -215,7 +215,8 @@ int main(int argc,char* argv[]) {
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_WM_SetCaption("Point Cloud", NULL);
-	SDL_SetVideoMode(640,480, 32, SDL_OPENGL);
+//	SDL_SetVideoMode(640,480, 32, SDL_OPENGL);
+	SDL_SetVideoMode(1600,1200, 32, SDL_OPENGL);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(70,(double)640/480,1,1000);

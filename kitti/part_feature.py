@@ -222,7 +222,9 @@ def getFeatures(grid,length,width,height):
 		criteria9,
 	]
 
-def plotColoredRegion(x,y,colors,categories):
+def plotColoredRegion(x,y,categories):
+	markers = {0:'.',1:'o',2:'*',3:'d',4:'s',5:'p'}
+	colors = {0:'#ffffff',1:'#ff0000',2:'#00ff00',3:'#0000ff',4:'#ffff00',5:'#ff00ff',6:'#00ffff'}
 	stepSize = 0.05
 	for c in x.keys():
 		for n in range(len(x[c])):
@@ -234,7 +236,7 @@ def plotColoredRegion(x,y,colors,categories):
 	xmax=np.max(xv) + 1
 	ymin=np.min(yv) - 1
 	ymax=np.max(yv) + 1
-	fillRegion=True
+	fillRegion=False
 	if fillRegion:
 		colormap={}
 		for c in colors.keys():
@@ -285,11 +287,11 @@ def plotColoredRegion(x,y,colors,categories):
 		plt.figure()
 		plt.imshow(palette,interpolation='nearest')
 		for key in x:
-			plt.plot((x[key]-xmin)/stepSize,(y[key]-ymin)/stepSize,'o',markersize=10,label=categories[key],color=colors[key])
+			plt.plot((x[key]-xmin)/stepSize,(y[key]-ymin)/stepSize,'o',markersize=10,label=categories[key],color=colors[key],marker=markers[key])
 	else:
 		plt.figure()
 		for key in x:
-			plt.plot(x[key],y[key],'.',markersize=10,label=categories[key],color=colors[key])
+			plt.plot(x[key],y[key],'.',markersize=10,label=categories[key],color=colors[key],marker=markers[key])
 		plt.axis([xmin,xmax,ymin,ymax])
 	plt.legend(loc='upper left')
 	matplotlib.rcParams.update({'font.size': 7})
@@ -333,8 +335,7 @@ if __name__ == "__main__":
 			c1[lb].append(criteria[0])
 			c2[lb].append(criteria[1])
 			i += 1
-		colors = {0:'#ffffff',1:'#ff0000',2:'#00ff00',3:'#0000ff',4:'#ffff00',5:'#ff00ff',6:'#00ffff'}
-		plotColoredRegion(c1,c2,colors,categories)
+		plotColoredRegion(c1,c2,categories)
 	else:
 		f=open(sys.argv[1],'r')
 		l=f.readline().split()

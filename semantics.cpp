@@ -12,12 +12,18 @@
 #include FT_FREETYPE_H
 #define IGNORE_ZEROS 1
 #define INCLUDE_OUTLIERS 1
+#define SHOW_PERCENTAGE 0
 
 //double cameraX=0,cameraY=-5,cameraZ=3;
 double cameraX=245,cameraY=-223,cameraZ=201;
 double centerX=0,centerY=0,centerZ=0;
 double upX=0,upY=0,upZ=1;
-const int labelWidth=180,labelHeight=30,fontpixels=20,grayLevel=50;
+#if SHOW_PERCENTAGE
+	const int labelWidth=180;
+#else 
+	const int labelWidth=152;
+#endif
+const int labelHeight=30,fontpixels=20,grayLevel=50;
 int mouseIndex = 0;
 int previousX,previousY;
 double scrollSpeed = 1.01;
@@ -357,7 +363,11 @@ int main(int argc,char* argv[]) {
 				double score = strtod(c,&c);
 				max_score = score > max_score ? score : max_score;
 			}
+#if SHOW_PERCENTAGE
 			int k = sprintf(d,"%s:%.0f%%",categories[l],max_score*100);
+#else
+			int k = sprintf(d,"%s",categories[l]);
+#endif
 			score.push_back(max_score);
 			descriptions.push_back(d);
 			d += k + 1;
