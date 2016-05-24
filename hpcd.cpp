@@ -129,8 +129,14 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 			for (int i=0;i<totalPoints;i++) {
 				if (!fgets(buf,256,f))
 					break;
-				if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+//				if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+//					break;
+				int rgb=0;
+				if (!sscanf(buf,"%f %f %f %d",&x,&y,&z,&rgb) == 6)
 					break;
+				r = (rgb >> 16) & 0xFF;
+				g = (rgb >> 8) & 0xFF;
+				b = rgb & 0xFF;
 				if (x >= res->minX && x <= res->maxX &&
 					y >= res->minY && y <= res->maxY &&
 					z >= res->minZ && z <= res->maxZ) {
@@ -170,8 +176,14 @@ HPCD* HPCD_Init(char* inFile,int numGrid,Box* box,std::vector<float> *float_data
 			for (int i=1;i<totalPoints;i++) {
 				if (!fgets(buf,256,f))
 					break;
-				if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+//				if (!sscanf(buf, "%f %f %f %hhu %hhu %hhu",&x,&y,&z,&r,&g,&b) == 6)
+//					break;
+				int rgb=0;
+				if (!sscanf(buf,"%f %f %f %d",&x,&y,&z,&rgb) == 6)
 					break;
+				r = (rgb >> 16) & 0xFF;
+				g = (rgb >> 8) & 0xFF;
+				b = rgb & 0xFF;
 				if (x < res->minX) res->minX = x;
 				else if (x > res->maxX) res->maxX = x;
 				if (y < res->minY) res->minY = y;
@@ -754,6 +766,47 @@ void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<float> *float_data
 	printf("Saved %d point clouds to %s\n",numClusters,outDir);
 }
 
+HPCD* HPCD_combine(std::vector<HPCD*> *region) {
+	HPCD* res = new HPCD;
+	memcpy(res,region->at(0),sizeof(HPCD));
+	res->data = new HPoint*[res->maxSize]();
+	res->numPoints = 0;
+	for (size_t i=0;i<region->size();i++) {
+		HPCD* h = region->at(i);
+		for (int j=0;j<h->maxSize;j++) {
+			if (h->data[j]) {
+				res->data[j] = h->data[j];
+				res->numPoints++;
+			}
+		}
+	}
+	return res;
+}
+
+void HPCD_divide(HPCD* cloud, std::vector<HPCD*> *region, int numRegions) {
+	for (int i=0;i<numRegions;i++) {
+		for (int j=0;j<numRegions;j++) {
+			HPCD* h = new HPCD;
+			memcpy(h,cloud,sizeof(HPCD));
+			h->numPoints = 0;
+			h->data = new HPoint*[h->maxSize]();
+			region->push_back(h);
+		}
+	}
+	int xrange = (cloud->maxX - cloud->minX) / cloud->leafSize + 1;
+	int yrange = (cloud->maxY - cloud->minY) / cloud->leafSize + 1;
+	for (int k=0;k<cloud->maxSize;k++) {
+		HPoint* p = cloud->data[k];
+		if (p) {
+			int i = p->x * numRegions / xrange;
+			int j = p->y * numRegions / yrange;
+			HPCD* h = region->at(i * numRegions + j);
+			h->data[k] = p;
+			h->numPoints++;
+		}
+	}
+}
+
 void segmentPlane(HPCD* cloud, int iter,float inlierRatio) {
 	int maxInliers = 0;
 	int optimumInliers = inlierRatio * cloud->numPoints;
@@ -809,6 +862,7 @@ void segmentPlane(HPCD* cloud, int iter,float inlierRatio) {
 		bestPlane.a * bestPlane.a + 
 		bestPlane.b * bestPlane.b + 
 		bestPlane.c * bestPlane.c);
+	double RMSE = 0;
 	for (int j=0;j<cloud->maxSize;j++) {
 		HPoint* h = cloud->data[j];
 		if ( h && abs( bestPlane.a * h->x +
@@ -816,12 +870,14 @@ void segmentPlane(HPCD* cloud, int iter,float inlierRatio) {
 			 bestPlane.c * h->z +
 			 bestPlane.d )
 			 < distanceThreshold) {
+			double d = 1.0 * (bestPlane.a * h->x + bestPlane.b * h->y + bestPlane.c * h->z + bestPlane.d) / distanceThreshold;
+			RMSE += d * d;
 			delete cloud->data[j];
 			cloud->data[j] = NULL;
 			cloud->numPoints--;
 		}
 	}
-	printf("RANSAC: %d points %d iters (%d,%d,%d,%d)\n",cloud->numPoints,i,bestPlane.a,bestPlane.b,bestPlane.c,bestPlane.d);
+	printf("RANSAC: %d points %d iters (%d,%d,%d,%d) (RMSE %f)\n",cloud->numPoints,i,bestPlane.a,bestPlane.b,bestPlane.c,bestPlane.d,sqrt(RMSE / maxInliers));
 	delete[] pointdata;
 }
 
@@ -959,6 +1015,155 @@ void euclideanClustering(HPCD* cloud,int totalClusters) {
 	delete[] sortedClusters;
 }
 
+void rgb2lab(unsigned char R,unsigned char G,unsigned char B,float *_L, float *_a, float *_b) {
+	float r = R / 255.0;
+	float g = G / 255.0;
+	float b = B / 255.0;
+	r = (r > 0.04045 ? pow((r + 0.055) / 1.055, 2.4) : r / 12.92) * 100.0;
+	g = (g > 0.04045 ? pow((g + 0.055) / 1.055, 2.4) : g / 12.92) * 100.0;
+	b = (b > 0.04045 ? pow((b + 0.055) / 1.055, 2.4) : b / 12.92) * 100.0;
+	float X = r * 0.4124 + g * 0.3576 + b * 0.1805;
+	float Y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+	float Z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+
+	float var_X = X / 95.047;
+	float var_Y = Y / 100;
+	float var_Z = Z / 108.883;
+
+	if ( var_X > 0.008856 ) var_X = pow(var_X,( 1.0/3 ));
+	else var_X = (903.3*var_X + 16) / 116;
+	if ( var_Y > 0.008856 ) var_Y = pow(var_Y,( 1.0/3 ));
+	else var_Y = (903.3*var_Y + 16) / 116;
+	if ( var_Z > 0.008856 ) var_Z = pow(var_Z,( 1.0/3 ));
+	else var_Z = (903.3*var_Z + 16) / 116;
+
+	*_L = ( 116 * var_Y ) - 16;
+	if (*_L < 0)
+		*_L = 0;
+	*_a = 500 * ( var_X - var_Y );
+	*_b = 200 * ( var_Y - var_Z );
+}
+
+float colorDiff(HPoint* p1, HPoint* p2) {
+	float d = 0;
+	d += (p1->r - p2->r) * (p1->r - p2->r);
+	d += (p1->g - p2->g) * (p1->g - p2->g);
+	d += (p1->b - p2->b) * (p1->b - p2->b);
+//	float L1,a1,b1,L2,a2,b2;
+//	rgb2lab(p1->r,p1->g,p1->b,&L1,&a1,&b1);
+//	rgb2lab(p2->r,p2->g,p2->b,&L2,&a2,&b2);
+//	d += (L1 - L2) * (L1 - L2);
+//	d += (a1 - a2) * (a1 - a2);
+//	d += (b1 - b2) * (b1 - b2);
+	return d;
+}
+
+void HPCD_convertColor(HPCD* cloud) {
+	std::vector<float> listL;
+	std::vector<float> listA;
+	std::vector<float> listB;
+	float minL=9999,minA=9999,minB=9999;
+	float maxL=-1,maxA=-1,maxB=-1;
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* p = cloud->data[i];
+		if (p) {
+			float l,a,b;
+			rgb2lab(p->r,p->g,p->b,&l,&a,&b);
+			listL.push_back(l);
+			listA.push_back(a);
+			listB.push_back(b);
+			if (l > maxL) maxL = l;
+			if (l < minL) minL = l;
+			if (a > maxA) maxA = a;
+			if (a < minA) minA = a;
+			if (b > maxB) maxB = b;
+			if (b < minB) minB = b;
+		}
+	}
+	int j=0;
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* p = cloud->data[i];
+		if (p) {
+			p->r = (unsigned char) ((listL[j] - minL) / (maxL - minL) * 255);
+			p->g = (unsigned char) ((listA[j] - minA) / (maxA - minA) * 255);
+			p->b = (unsigned char) ((listB[j] - minB) / (maxB - minB) * 255);
+			j++;
+		}
+	}
+}
+
+void colorClustering(HPCD* cloud,int totalClusters) {
+	bool* visited = new bool[cloud->maxSize]();
+	std::vector<Cluster> clusters;
+	int numClusters = 0;
+	float colorThreshold = 5000;
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* seed = cloud->data[i];
+		if (!seed || visited[i]) continue;
+		Cluster c = {numClusters,0};
+		std::vector<int> Q;
+		Q.push_back(i);
+		visited[i] = true;
+		while (Q.size() > 0) {
+			int p = Q[Q.size()-1];
+			Q.pop_back();
+			HPoint* h = cloud->data[p];
+			h->label = numClusters;
+			c.size++;
+			int j;
+			j = HPCD_find(cloud,h->x-1,h->y,h->z);
+			if (j>=0 && !visited[j] && colorDiff(h,cloud->data[j]) < colorThreshold) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x+1,h->y,h->z);
+			if (j>=0 && !visited[j] && colorDiff(h,cloud->data[j]) < colorThreshold) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y-1,h->z);
+			if (j>=0 && !visited[j] && colorDiff(h,cloud->data[j]) < colorThreshold) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y+1,h->z);
+			if (j>=0 && !visited[j] && colorDiff(h,cloud->data[j]) < colorThreshold) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y,h->z-1);
+			if (j>=0 && !visited[j] && colorDiff(h,cloud->data[j]) < colorThreshold) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+			j = HPCD_find(cloud,h->x,h->y,h->z+1);
+			if (j>=0 && !visited[j] && colorDiff(h,cloud->data[j]) < colorThreshold) {
+				Q.push_back(j);
+				visited[j] = true;
+			}
+		}
+//		printf("Cluster %d: %d\n",numClusters,c.size);
+		clusters.push_back(c);
+		numClusters++;
+	}
+	Cluster *sortedClusters = new Cluster[numClusters];
+	memcpy(sortedClusters,clusters.data(),numClusters*sizeof(Cluster));
+	qsort(sortedClusters,numClusters,sizeof(Cluster),compareCluster);
+	int *idx = new int[numClusters];
+	for (int i=0;i<numClusters;i++)
+		idx[i] = -1;
+	for (int i=0;i<totalClusters && i<numClusters;i++)
+		idx[sortedClusters[i].index] = i;
+	for (int i=0;i<cloud->maxSize;i++) {
+		HPoint* h = cloud->data[i];
+		if (h)
+			h->label = idx[h->label];
+	}
+	delete[] idx;
+	delete[] visited;
+	delete[] sortedClusters;
+}
+
 void writeParam(char* filename,HPCD* cloud,float segment,float cluster,int mincluster,int maxcluster) {
 	FILE* f = fopen(filename,"w");
 	if (!f)
@@ -1027,8 +1232,18 @@ int main(int argc,char* argv[]) {
 	sprintf(buf,"%s/param.txt",outDir);
 	writeParam(buf,cloud,cloud->leafSize,cloud->leafSize,cloud->numPoints/1000,cloud->numPoints/2);
 #endif
-	segmentPlane(cloud,10000,0.5);
-	HPCD_resize(cloud);
+//	std::vector<HPCD*> regions;
+//	HPCD_divide(cloud,&regions,4);
+//	delete[] cloud->data;
+//	delete cloud;
+//	for (size_t i=0;i<regions.size();i++) {
+//		segmentPlane(regions[i],10000,0.5);
+//	}
+//	cloud = HPCD_combine(&regions);
+//	for (size_t i=0;i<regions.size();i++) {
+//		delete[] regions[i]->data;
+//		delete regions[i];
+//	}
 //	segmentPlane(cloud,10000,0.5);
 //	HPCD_resize(cloud);
 #if PROFILE
@@ -1043,8 +1258,9 @@ int main(int argc,char* argv[]) {
 	std::vector<std::vector<int> > indices;
 	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
 #else
-	int numClusters = 100;
-	euclideanClustering(cloud,numClusters);
+	int numClusters = 50;
+//	euclideanClustering(cloud,numClusters);
+	colorClustering(cloud,numClusters);
 #endif
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);

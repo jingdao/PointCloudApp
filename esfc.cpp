@@ -838,8 +838,8 @@ std::vector<float> getPartFeature(HPCD* cloud) {
 			}
 		}
 	}
-	m1 = topCount1/(bottomCount1+1)*(bottomCount2+bottomCount3)/(topCount2+topCount3);
-	m2 = topCount3/(bottomCount3+1)*(bottomCount1+bottomCount2)/(topCount1+topCount2);
+	m1 = topCount1/(bottomCount1+1)*(bottomCount2+bottomCount3)/(topCount2+topCount3+1);
+	m2 = topCount3/(bottomCount3+1)*(bottomCount1+bottomCount2)/(topCount1+topCount2+1);
 	if (m1 < m2)
 		feature.push_back(m1 / (m2+1));
 	else
