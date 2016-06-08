@@ -22,6 +22,7 @@
 !scan_eval.cpp
 !esfc.cpp
 !occ_grid.cpp
+!size_filter.cpp
 !plyheader
 !kitti
 kitti/*

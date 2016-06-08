@@ -85,8 +85,9 @@ if use_linear:
 	for i in range(len(proba)):
 		proba[i] = 1 / (1 + np.exp(-proba[i]))
 		proba[i] = proba[i] / sum(proba[i])
-#		if max(proba[i]) < 0.4:
-#			prediction[i] = 0
+		proba_sorted = sorted(proba[i],reverse=True)
+		if proba_sorted[0] < 0.4 or proba_sorted[0] / proba_sorted[1] < 2:
+			prediction[i] = 0
 else:
 	proba = svc.predict_proba(features['test'])
 print 'Accuracy %.2f%%' % (svc.score(features['test'],labels['test'])*100)

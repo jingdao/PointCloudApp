@@ -987,39 +987,12 @@ void segmentLowest(HPCD* cloud) {
 	delete[] lowest;
 }
 
-void calculateCurvature(HPCD* cloud) {
+void calculateCurvature(HPCD* cloud,int colorscheme) { //0:none 1:grayscale 2:color
 	int min_curvature=-1,max_curvature=-1;
 	int r=3;
 	for (int i=0;i<cloud->maxSize;i++) {
 		HPoint* h = cloud->data[i];
 		if (h) {
-			h->curvature = 0;
-//			if (HPCD_find(cloud,h->x-1,h->y,h->z) ^ HPCD_find(cloud,h->x+1,h->y,h->z))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x,h->y-1,h->z) ^ HPCD_find(cloud,h->x,h->y+1,h->z))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x,h->y,h->z-1) ^ HPCD_find(cloud,h->x,h->y,h->z+1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y-1,h->z) ^ HPCD_find(cloud,h->x+1,h->y+1,h->z))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y+1,h->z) ^ HPCD_find(cloud,h->x+1,h->y-1,h->z))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y,h->z-1) ^ HPCD_find(cloud,h->x+1,h->y,h->z+1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y,h->z+1) ^ HPCD_find(cloud,h->x+1,h->y,h->z-1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x,h->y-1,h->z-1) ^ HPCD_find(cloud,h->x,h->y+1,h->z+1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x,h->y-1,h->z+1) ^ HPCD_find(cloud,h->x,h->y+1,h->z-1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y-1,h->z-1) ^ HPCD_find(cloud,h->x+1,h->y+1,h->z+1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y-1,h->z+1) ^ HPCD_find(cloud,h->x+1,h->y+1,h->z-1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y+1,h->z-1) ^ HPCD_find(cloud,h->x+1,h->y-1,h->z+1))
-//				h->curvature++;
-//			if (HPCD_find(cloud,h->x-1,h->y+1,h->z+1) ^ HPCD_find(cloud,h->x+1,h->y-1,h->z-1))
-//				h->curvature++;
 			int sdx=0,sdy=0,sdz=0;
 			for (int dx=-r;dx<=r;dx++) {
 				for (int dy=-r;dy<=r;dy++) {
@@ -1039,11 +1012,18 @@ void calculateCurvature(HPCD* cloud) {
 				max_curvature = h->curvature;
 		}
 	}
-	float factor = 1.0 / (max_curvature - min_curvature);
-	for (int i=0;i<cloud->maxSize;i++) {
-		HPoint* h = cloud->data[i];
-		if (h) {
-			colormap(factor*(h->curvature-min_curvature) , &h->r, &h->g, &h->b);
+	if (colorscheme) {
+		float factor = 1.0 / (max_curvature - min_curvature);
+		for (int i=0;i<cloud->maxSize;i++) {
+			HPoint* h = cloud->data[i];
+			if (h) {
+				if (colorscheme==1) {
+					h->r = 255 * factor * (h->curvature-min_curvature);
+					h->g = 255 * factor * (h->curvature-min_curvature);
+					h->b = 255 * factor * (h->curvature-min_curvature);
+				} else
+					colormap(factor*(h->curvature-min_curvature) , &h->r, &h->g, &h->b);
+			}
 		}
 	}
 }
@@ -1212,8 +1192,8 @@ void rgb2lab(unsigned char R,unsigned char G,unsigned char B,float *_L, float *_
 }
 
 bool validNeighbor(HPoint* p1, HPoint* p2) {
-	float colorThreshold = 70000;
-//	int curvatureThreshold = 200;
+	float colorThreshold = 35000;
+	int curvatureThreshold = 200;
 	float colorDiff = 0;
 	colorDiff += (p1->r - p2->r) * (p1->r - p2->r);
 	colorDiff += (p1->g - p2->g) * (p1->g - p2->g);
@@ -1228,8 +1208,8 @@ bool validNeighbor(HPoint* p1, HPoint* p2) {
 		return false;
 //	if (p2->curvature > curvatureThreshold)
 //		return false;
-//	if (abs(p1->curvature - p2->curvature) > curvatureThreshold)
-//		return false;
+	if (abs(p1->curvature - p2->curvature) > curvatureThreshold)
+		return false;
 	return true;
 }
 
@@ -1408,9 +1388,12 @@ int main(int argc,char* argv[]) {
 	sprintf(buf,"%s/param.txt",outDir);
 	writeParam(buf,cloud,cloud->leafSize,cloud->leafSize,cloud->numPoints/1000,cloud->numPoints/2);
 #endif
-	segmentPlane(cloud,10000,0.5);
+//	segmentPlane(cloud,10000,0.5);
+	segmentLowest(cloud);
+//	segmentLowest(cloud);
+//	segmentLowest(cloud);
 	HPCD_resize(cloud);
-	calculateCurvature(cloud);
+	calculateCurvature(cloud,0);
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Ground segmentation): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
@@ -1418,14 +1401,15 @@ int main(int argc,char* argv[]) {
 #else
 	sprintf(buf,"%s/original.pcd",outDir);
 	HPCD_write(buf,cloud);
+	exit(0);
 #endif
 #if USE_LEAF
 	std::vector<std::vector<int> > indices;
 	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
 #else
 	int numClusters = 50;
-//	euclideanClustering(cloud,numClusters);
-	colorClustering(cloud,numClusters);
+	euclideanClustering(cloud,numClusters);
+//	colorClustering(cloud,numClusters);
 #endif
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);

@@ -15,7 +15,8 @@
 #define SHOW_PERCENTAGE 0
 
 //double cameraX=0,cameraY=-5,cameraZ=3;
-double cameraX=245,cameraY=-223,cameraZ=201;
+//double cameraX=245,cameraY=-223,cameraZ=201;
+double cameraX=20,cameraY=20,cameraZ=20;
 double centerX=0,centerY=0,centerZ=0;
 double upX=0,upY=0,upZ=1;
 #if SHOW_PERCENTAGE
@@ -312,7 +313,9 @@ void draw() {
 		drawLine(i,4,6);
 		drawLine(i,5,7);
 		drawLine(i,6,7);
+#if IGNORE_ZEROS
 		drawText(i);
+#endif
 	}
 
 	glFlush();
@@ -320,6 +323,51 @@ void draw() {
 
 	glPopMatrix();
 	glPopAttrib();
+}
+
+void centerMap() {
+	int p=0;
+	float cx=0,cy=0,cz=0;
+	if (outlier) {
+		for (int n=0;n<outlier->numPoints;n++) {
+			p++;
+			cx += outlier->float_data[n*4];
+			cy += outlier->float_data[n*4+1];
+			cz += outlier->float_data[n*4+2];
+		}
+	}
+	for (int i=0;i<cloud.size();i++) {
+		for (int n = 0; n < cloud[i]->numPoints; n++){
+			p++;
+			cx += cloud[i]->float_data[n*4];
+			cy += cloud[i]->float_data[n*4+1];
+			cz += cloud[i]->float_data[n*4+2];
+		}
+	}
+	cx /= p;
+	cy /= p;
+	cz /= p;
+	if (outlier) {
+		for (int n=0;n<outlier->numPoints;n++) {
+			outlier->float_data[n*4] -= cx;
+			outlier->float_data[n*4+1] -= cy;
+			outlier->float_data[n*4+2] -= cz;
+		}
+	}
+	for (int i=0;i<cloud.size();i++) {
+		for (int n = 0; n < cloud[i]->numPoints; n++){
+			cloud[i]->float_data[n*4] -= cx;
+			cloud[i]->float_data[n*4+1] -= cy;
+			cloud[i]->float_data[n*4+2] -= cz;
+		}
+	}
+	for (int i=0;i<box.size();i++) {
+		for (int j=0;j<8;j++) {
+			box[i][j*3] -= cx;
+			box[i][j*3+1] -= cy;
+			box[i][j*3+2] -= cz;
+		}
+	}
 }
 
 int main(int argc,char* argv[]) {
@@ -409,6 +457,7 @@ int main(int argc,char* argv[]) {
 	sprintf(buf,"%s/outlier.pcd",argv[1]);
 	outlier = NewPCD(buf);
 #endif
+	centerMap();
 
 	FT_Init_FreeType(&ft);
 	FT_New_Face(ft,"/usr/share/fonts/truetype/freefont/FreeSans.ttf",0,&face);

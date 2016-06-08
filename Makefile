@@ -67,6 +67,9 @@ esfc: esfc.cpp
 occ_grid: occ_grid.cpp
 	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU 
 
+size_filter: size_filter.cpp
+	$(CXX) -ggdb3 -o $@ $< -llapack
+
 debug: main
 
 single: all
