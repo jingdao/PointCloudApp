@@ -58,7 +58,10 @@ statistics=[]
 confusionMatrix=[[0]*len(categories) for i in range(len(categories))]
 
 for i in range(start,end+1,inc):
-	d = inputDir+'/clusters'+str(i).zfill(len(sys.argv[2]))
+	if len(sys.argv) >= 5:
+		d = inputDir+'/clusters'+str(i).zfill(len(sys.argv[2]))
+	else:
+		d = inputDir
 #	d = '.'
 	if os.path.isdir(d) and os.path.isfile(d+'/labels.txt') and os.path.isfile(d+'/prediction.txt'):
 		numFiles += 1

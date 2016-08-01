@@ -21,6 +21,10 @@ struct HPoint {
 	int curvature;
 };
 
+struct Point {
+	float x,y,z;
+};
+
 struct HPCD {
 	int numGrid;
 	int numPoints;
@@ -41,6 +45,10 @@ struct Plane {
 
 struct Cluster {
 	int index,size;
+};
+
+struct Coordinate {
+	int x,y;
 };
 
 enum PCD_data_storage {
@@ -706,6 +714,30 @@ void HPCD_write(char* filename,HPCD* pointcloud) {
 	printf("Wrote %d points to %s\n",pointcloud->numPoints,filename);
 }
 
+void HPCD_writePoints(char* filename,std::vector<Point> *points) {
+	FILE* f = fopen(filename, "w");
+	if (!f) {
+		printf("Cannot write to file: %s\n", filename);
+		return;
+	}
+	fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
+	"VERSION 0.7\n"
+	"FIELDS x y z\n"
+	"SIZE 4 4 4\n"
+	"TYPE F F F\n"
+	"COUNT 1 1 1\n"
+	"WIDTH %lu\n"
+	"HEIGHT 1\n"
+	"VIEWPOINT 0 0 0 1 0 0 0\n"
+	"POINTS %lu\n"
+	"DATA ascii\n",points->size(),points->size());
+	for (size_t i=0;i<points->size();i++) {
+		fprintf(f,"%f %f %f\n",points->at(i).x,points->at(i).y,points->at(i).z);
+	}
+	fclose(f);
+	printf("Wrote %lu points to %s\n",points->size(),filename);
+}
+
 void HPCD_writeLeafClusters(char* outDir,HPCD* cloud, std::vector<std::vector<int> > *indices) {
 	char buffer[128];
 	for (size_t i=0;i<indices->size();i++) {
@@ -957,6 +989,87 @@ void segmentPlane(HPCD* cloud, int iter,float inlierRatio) {
 	delete[] pointdata;
 }
 
+void extractPlane(HPCD* cloud, float segThreshold, int iter,float inlierRatio, std::vector<Point> *points) {
+	int maxInliers = 0;
+	int optimumInliers = inlierRatio * cloud->numPoints;
+	int distanceThreshold;
+	Plane bestPlane = {0,0,1,0};
+	int i,k=0;
+	int* pointdata = new int[cloud->numPoints*3];
+	for (int j=0;j<cloud->maxSize;j++) {
+		HPoint* h = cloud->data[j];
+		if (h) {
+			pointdata[k++] = h->x;
+			pointdata[k++] = h->y;
+			pointdata[k++] = h->z;
+		}
+	}
+	for (i=0;i<iter;i++) {
+		//Pick 3 points
+		int *p0 = pointdata + (rand() % cloud->numPoints * 3);
+		int *p1 = pointdata + (rand() % cloud->numPoints * 3);
+		int *p2 = pointdata + (rand() % cloud->numPoints * 3);
+		int p0x=p0[0],p0y=p0[1],p0z=p0[2];
+		int p1x=p1[0],p1y=p1[1],p1z=p1[2];
+		int p2x=p2[0],p2y=p2[1],p2z=p2[2];
+		Plane currentPlane = {
+			(p1y-p0y)*(p2z-p0z) - (p2y-p0y)*(p1z-p0z),
+			(p1z-p0z)*(p2x-p0x) - (p2z-p0z)*(p1x-p0x),
+			(p1x-p0x)*(p2y-p0y) - (p2x-p0x)*(p1y-p0y),
+			0
+		};
+		currentPlane.d = -(currentPlane.a * p0x + currentPlane.b * p0y + currentPlane.c * p0z);
+		if (currentPlane.a == 0 && currentPlane.b == 0 && currentPlane.c ==0 )
+			continue; //picked collinear points
+		distanceThreshold = sqrt(
+			currentPlane.a * currentPlane.a + 
+			currentPlane.b * currentPlane.b + 
+			currentPlane.c * currentPlane.c) * segThreshold / cloud->leafSize;
+		int numInliers = 0;
+		for (int j=0;j<cloud->numPoints;j++) {
+			if ( abs( currentPlane.a * pointdata[j*3] +
+				 currentPlane.b * pointdata[j*3+1] +
+				 currentPlane.c * pointdata[j*3+2] +
+				 currentPlane.d )
+				 < distanceThreshold)	
+				numInliers++;
+		}
+		if (numInliers > maxInliers) {
+			maxInliers = numInliers;
+			bestPlane = currentPlane;
+			if (maxInliers > optimumInliers)
+				break;
+		}
+	}
+	distanceThreshold = sqrt(
+		bestPlane.a * bestPlane.a + 
+		bestPlane.b * bestPlane.b + 
+		bestPlane.c * bestPlane.c) * segThreshold / cloud->leafSize;
+	double RMSE = 0;
+	for (int j=0;j<cloud->maxSize;j++) {
+		HPoint* h = cloud->data[j];
+		if ( h && abs( bestPlane.a * h->x +
+			 bestPlane.b * h->y +
+			 bestPlane.c * h->z +
+			 bestPlane.d )
+			 < distanceThreshold) {
+			double d = 1.0 * (bestPlane.a * h->x + bestPlane.b * h->y + bestPlane.c * h->z + bestPlane.d) / distanceThreshold;
+			RMSE += d * d;
+			Point p = {
+				cloud->minX + h->x * cloud->leafSize,
+				cloud->minY + h->y * cloud->leafSize,
+				cloud->minZ + h->z * cloud->leafSize
+			};
+			points->push_back(p);
+			delete cloud->data[j];
+			cloud->data[j] = NULL;
+			cloud->numPoints--;
+		}
+	}
+	printf("RANSAC: %d points %d iters (%d,%d,%d,%d) (RMSE %f)\n",cloud->numPoints,i,bestPlane.a,bestPlane.b,bestPlane.c,bestPlane.d,sqrt(RMSE / maxInliers));
+	delete[] pointdata;
+}
+
 void segmentLowest(HPCD* cloud) {
 	int xrange = (cloud->maxX - cloud->minX) / cloud->leafSize + 1;
 	int yrange = (cloud->maxY - cloud->minY) / cloud->leafSize + 1;
@@ -1160,6 +1273,77 @@ void euclideanClustering(HPCD* cloud,int totalClusters) {
 	delete[] idx;
 	delete[] visited;
 	delete[] sortedClusters;
+}
+
+int euclideanClusteringXY(HPCD* cloud, int totalClusters) {
+	int clusterThreshold = 1;
+	int minsize = 100;
+	std::vector<Cluster> clusters;
+	int numClusters = 0;
+	int xrange = (cloud->maxX - cloud->minX) / cloud->leafSize + 1;
+	int yrange = (cloud->maxY - cloud->minY) / cloud->leafSize + 1;
+	bool* valid = new bool[xrange * yrange]();
+	int* grid = new int[xrange * yrange];
+	for (int i = 0; i<xrange*yrange; i++)
+		grid[i] = -1;
+	for (int i = 0; i < cloud->maxSize; i++) {
+		HPoint* h = cloud->data[i];
+		if (h)
+			valid[h->x*yrange + h->y] = true;
+	}
+	Coordinate p;
+	for (p.x = 0; p.x < xrange; p.x++) {
+		for (p.y = 0; p.y < yrange; p.y++) {
+			int id = p.x * yrange + p.y;
+			if (!valid[id] || grid[id]>=0)
+				continue;
+			std::vector<Coordinate> Q;
+			Q.push_back(p);
+			Cluster c = { numClusters, 0 };
+			while (Q.size() > 0) {
+				Coordinate q = Q[Q.size() - 1];
+				Q.pop_back();
+				int id = q.x * yrange + q.y;
+				if (!valid[id] || grid[id]>=0)
+					continue;
+				c.size++;
+				grid[id] = numClusters;
+				for (int xi = q.x - clusterThreshold; xi <= q.x + clusterThreshold; xi++) {
+					for (int yi = q.y - clusterThreshold; yi <= q.y + clusterThreshold; yi++) {
+						if (xi >= 0 && yi >= 0 && xi < xrange && yi < yrange) {
+							Coordinate r = { xi, yi };
+							Q.push_back(r);
+						}
+					}
+				}
+			}
+			clusters.push_back(c);
+			numClusters++;
+		}
+	}
+	for (int i = 0; i<cloud->maxSize; i++) {
+		HPoint* h = cloud->data[i];
+		if (h)
+			h->label = grid[h->x * yrange + h->y];
+	}
+	Cluster *sortedClusters = new Cluster[numClusters];
+	memcpy(sortedClusters, clusters.data(), numClusters*sizeof(Cluster));
+	qsort(sortedClusters, numClusters, sizeof(Cluster), compareCluster);
+	int *idx = new int[numClusters];
+	for (int i = 0; i<numClusters; i++)
+		idx[i] = -1;
+	int k;
+	for (k = 0; k<totalClusters && k<numClusters && sortedClusters[k].size > minsize; k++)
+		idx[sortedClusters[k].index] = k;
+	for (int i = 0; i<cloud->maxSize; i++) {
+		HPoint* h = cloud->data[i];
+		if (h)
+			h->label = idx[h->label];
+	}
+	delete[] valid;
+	delete[] idx;
+	delete[] sortedClusters;
+	return k;
 }
 
 void rgb2lab(unsigned char R,unsigned char G,unsigned char B,float *_L, float *_a, float *_b) {
@@ -1388,12 +1572,26 @@ int main(int argc,char* argv[]) {
 	sprintf(buf,"%s/param.txt",outDir);
 	writeParam(buf,cloud,cloud->leafSize,cloud->leafSize,cloud->numPoints/1000,cloud->numPoints/2);
 #endif
-//	segmentPlane(cloud,10000,0.5);
-	segmentLowest(cloud);
-//	segmentLowest(cloud);
-//	segmentLowest(cloud);
+	std::vector<Point> plane;
+	plane.clear();
+	extractPlane(cloud,0.1,10000,0.5,&plane);
+	sprintf(buf,"%s/plane1.pcd",outDir);
+	HPCD_writePoints(buf,&plane);
 	HPCD_resize(cloud);
-	calculateCurvature(cloud,0);
+	plane.clear();
+	extractPlane(cloud,0.1,10000,0.5,&plane);
+	sprintf(buf,"%s/plane2.pcd",outDir);
+	HPCD_writePoints(buf,&plane);
+	HPCD_resize(cloud);
+	plane.clear();
+	extractPlane(cloud,0.1,10000,0.5,&plane);
+	sprintf(buf,"%s/plane3.pcd",outDir);
+	HPCD_writePoints(buf,&plane);
+	HPCD_resize(cloud);
+//	segmentLowest(cloud);
+//	segmentLowest(cloud);
+//	segmentLowest(cloud);
+//	calculateCurvature(cloud,0);
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Ground segmentation): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
@@ -1401,14 +1599,14 @@ int main(int argc,char* argv[]) {
 #else
 	sprintf(buf,"%s/original.pcd",outDir);
 	HPCD_write(buf,cloud);
-	exit(0);
 #endif
 #if USE_LEAF
 	std::vector<std::vector<int> > indices;
 	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
 #else
-	int numClusters = 50;
-	euclideanClustering(cloud,numClusters);
+	int numClusters = 12;
+//	euclideanClustering(cloud,numClusters);
+	euclideanClusteringXY(cloud,numClusters);
 //	colorClustering(cloud,numClusters);
 #endif
 #if PROFILE

@@ -61,7 +61,7 @@ hpcd: hpcd.cpp
 scan_eval: scan_eval.cpp
 	$(CXX) -ggdb3 -Wall -o $@ $<
 	
-esfc: esfc.cpp
+pad3d: pad3d.cpp
 	$(CXX) -ggdb3 -Wall -o $@ $< -llapack
 
 occ_grid: occ_grid.cpp
@@ -69,6 +69,9 @@ occ_grid: occ_grid.cpp
 
 size_filter: size_filter.cpp
 	$(CXX) -ggdb3 -o $@ $< -llapack
+
+zbuffer: zbuffer.cpp
+	$(CXX) -ggdb3 -o $@ $< -lGLU -lOSMesa
 
 debug: main
 

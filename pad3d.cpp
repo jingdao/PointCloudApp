@@ -809,8 +809,8 @@ std::vector<float> getPartFeature(HPCD* cloud) {
 			}
 		}
 	}
-	float m1 = 1.0 * (leftCount + rightCount) / midCount;
-	float m2 = 1.0 * (leftCount2 + rightCount2) / midCount2;
+	float m1 = 1.0 * (leftCount + rightCount) / (midCount+1);
+	float m2 = 1.0 * (leftCount2 + rightCount2) / (midCount2+1);
 	if (m1 < m2)
 		feature.push_back(m1 / m2);
 	else
@@ -994,7 +994,7 @@ std::vector<HPCD> make_part(HPCD* cloud) {
 
 int main(int argc, char* argv[]) {
 	if (argc<2) {
-		printf("./esfc 0-cloud.pcd\n");
+		printf("./pad3d 0-cloud.pcd\n");
 		return 1;
 	}
 
@@ -1024,10 +1024,10 @@ int main(int argc, char* argv[]) {
 //	std::vector<float> density = getDensity(cloud,&dim);
 //	sprintf(buffer,"%s.og",argv[1]);
 //	writeOccupancyGrid(buffer,density,dim);
-	sprintf(buffer,"%s-esf.pcd",argv[1]);
+	sprintf(buffer,"%s-pad.pcd",argv[1]);
 	writeHistogram(buffer,getPartFeature(cloud));
 #else
-	sprintf(buffer,"%s-esf.pcd",argv[1]);
+	sprintf(buffer,"%s-pad.pcd",argv[1]);
 	writeHistogram(buffer,getAssemblyHistogram(assembly));
 #endif
 	HPCD_delete(cloud);

@@ -178,13 +178,25 @@ int main(int argc, char* argv[]) {
 	double minX=vertices[0].x,maxX=vertices[0].x;
 	double minY=vertices[0].y,maxY=vertices[0].y;
 	double minZ=vertices[0].z,maxZ=vertices[0].z;
-	for (size_t i=1;i<vertices.size();i++) {
-		if (vertices[i].x < minX) minX = vertices[i].x;
-		else if (vertices[i].x > maxX) maxX = vertices[i].x;
-		if (vertices[i].y < minY) minY = vertices[i].y;
-		else if (vertices[i].y > maxY) maxY = vertices[i].y;
-		if (vertices[i].z < minZ) minZ = vertices[i].z;
-		else if (vertices[i].z > maxZ) maxZ = vertices[i].z;
+//	for (size_t i=1;i<vertices.size();i++) {
+//		if (vertices[i].x < minX) minX = vertices[i].x;
+//		else if (vertices[i].x > maxX) maxX = vertices[i].x;
+//		if (vertices[i].y < minY) minY = vertices[i].y;
+//		else if (vertices[i].y > maxY) maxY = vertices[i].y;
+//		if (vertices[i].z < minZ) minZ = vertices[i].z;
+//		else if (vertices[i].z > maxZ) maxZ = vertices[i].z;
+//	}
+	for (size_t i=0;i<faces.size();i++) {
+		Triangle t = faces[i];
+		Point point[3] = {vertices[t.id1],vertices[t.id2],vertices[t.id3]};
+		for (int j=0;j<3;j++) {
+			if (point[j].x < minX) minX = point[j].x;
+			else if (point[j].x > maxX) maxX = point[j].x;
+			if (point[j].y < minY) minY = point[j].y;
+			else if (point[j].y > maxY) maxY = point[j].y;
+			if (point[j].z < minZ) minZ = point[j].z;
+			else if (point[j].z > maxZ) maxZ = point[j].z;
+		}
 	}
 	printf("Bounding box: x:(%.2f %.2f) y:(%.2f %.2f) z:(%.2f %.2f)\n",minX,maxX,minY,maxY,minZ,maxZ);
 	Point centroid = {
@@ -199,7 +211,7 @@ int main(int argc, char* argv[]) {
 		planes.push_back(v);
 	}
 
-	double resolution = 0.005; //radians
+	double resolution = 0.01; //radians
 	int numCameras=16;
 	char buffer[128];
 #if USE_Y_VERTICAL

@@ -23,6 +23,7 @@
 !esfc.cpp
 !occ_grid.cpp
 !size_filter.cpp
+!zbuffer.cpp
 !plyheader
 !kitti
 kitti/*
@@ -45,6 +46,7 @@ kitti/*
 !kitti/boosting.py
 !kitti/adaboost.py
 !kitti/part_feature.py
+!kitti/pad_pipeline.sh
 !tools
 tools/*
 !tools/esf.cpp

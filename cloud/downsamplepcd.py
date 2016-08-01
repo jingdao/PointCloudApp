@@ -9,26 +9,55 @@ if len(sys.argv) < 4:
 
 infile = sys.argv[1]
 outfile = sys.argv[2]
-factor = 1.0 / float(sys.argv[3])
+resolution = float(sys.argv[3])
 
 input=open(infile,'r')
 output=open(outfile,'w')
 
+header=[]
 while True:
 	l = input.readline()
-	output.write(l)
+	header.append(l)
 	if l.startswith('DATA'):
 		break
 
+x = []
+y = []
+z = []
+attr = []
 while True:
 	l = input.readline().split()
 	if len(l) < 3:
 		break
-	x = math.floor(float(l[0]) * factor) / factor
-	y = math.floor(float(l[1]) * factor) / factor
-	z = math.floor(float(l[2]) * factor) / factor
-	vals = [x,y,z]
-	vals.extend(l[3:])
-	for v in vals:
+	x.append(float(l[0]))
+	y.append(float(l[1]))
+	z.append(float(l[2]))
+	attr.append(l[3:])
+
+xd = 0.5 * (min(x) + max(x))
+yd = 0.5 * (min(y) + max(y))
+zd = 0.5 * (min(z) + max(z))
+pointset = set()
+points = []
+
+for i in range(len(x)):
+	p = (int((x[i]-xd)/resolution),int((y[i]-yd)/resolution),int((z[i]-zd)/resolution))
+	if not p in pointset:
+		pointset.add(p)
+		vals = [x[i],y[i],z[i]]
+		vals.extend(attr[i])
+		points.append(vals)
+
+for l in header:
+	if l.startswith("WIDTH"):
+		output.write("WIDTH "+str(len(points))+"\n")
+	elif l.startswith("POINTS"):
+		output.write("POINTS "+str(len(points))+"\n")
+	else:
+		output.write(l)
+
+for p in points:
+	for v in p:
 		output.write(str(v)+' ')
 	output.write('\n')
+

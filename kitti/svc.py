@@ -14,7 +14,7 @@ inputFile = {'train':dr+'/svm_train_scaled.txt', 'test':dr+'/svm_test_scaled.txt
 outputFile = dr+'/svm_prediction.txt'
 use_linear = True
 plot_training_size = False
-plot_weights = True
+plot_weights = False
 
 #import data into matrix format
 features = {'train':[], 'test':[]}

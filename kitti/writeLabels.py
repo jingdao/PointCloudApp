@@ -19,7 +19,7 @@ if labels is None:
 else:
 	maxN = len(labels)
 for n in range(maxN):
-	f = dir + '/'+str(n)+'-cloud.pcd-esf.pcd'
+	f = dir + '/'+str(n)+'-cloud.pcd-pad.pcd'
 	try:
 		fd = open(f,'r')
 	except IOError:

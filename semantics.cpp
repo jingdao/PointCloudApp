@@ -22,7 +22,7 @@ double upX=0,upY=0,upZ=1;
 #if SHOW_PERCENTAGE
 	const int labelWidth=180;
 #else 
-	const int labelWidth=152;
+	const int labelWidth=80;
 #endif
 const int labelHeight=30,fontpixels=20,grayLevel=50;
 int mouseIndex = 0;
@@ -263,7 +263,8 @@ void drawLine(int i,int j,int k) {
 }
 
 void drawText(int i) {
-	glRasterPos3f(box[i][12],box[i][13],box[i][14]);
+//	glRasterPos3f(box[i][12],box[i][13],box[i][14]);
+	glRasterPos3f((box[i][12] + box[i][15] + box[i][18] + box[i][21]) / 4, (box[i][13] + box[i][16] + box[i][19] + box[i][22]) / 4, box[i][14]);
 	render_text(descriptions[i],raster);
 	glDrawPixels(labelWidth,labelHeight,GL_RGB,GL_UNSIGNED_BYTE,raster);
 }
