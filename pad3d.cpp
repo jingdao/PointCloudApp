@@ -1024,10 +1024,10 @@ int main(int argc, char* argv[]) {
 //	std::vector<float> density = getDensity(cloud,&dim);
 //	sprintf(buffer,"%s.og",argv[1]);
 //	writeOccupancyGrid(buffer,density,dim);
-	sprintf(buffer,"%s-pad.pcd",argv[1]);
+	sprintf(buffer,"%s-pad3d.pcd",argv[1]);
 	writeHistogram(buffer,getPartFeature(cloud));
 #else
-	sprintf(buffer,"%s-pad.pcd",argv[1]);
+	sprintf(buffer,"%s-pad3d.pcd",argv[1]);
 	writeHistogram(buffer,getAssemblyHistogram(assembly));
 #endif
 	HPCD_delete(cloud);

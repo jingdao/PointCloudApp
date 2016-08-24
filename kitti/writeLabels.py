@@ -4,6 +4,7 @@ import sys
 import glob
 import os
 dir = sys.argv[1]
+desc = 'esf' if len(sys.argv) < 3 else sys.argv[2]
 
 labels = None
 if os.path.isfile(dir+'/labels.txt'):
@@ -19,7 +20,7 @@ if labels is None:
 else:
 	maxN = len(labels)
 for n in range(maxN):
-	f = dir + '/'+str(n)+'-cloud.pcd-pad.pcd'
+	f = dir + '/'+str(n)+'-cloud.pcd-'+desc+'.pcd'
 	try:
 		fd = open(f,'r')
 	except IOError:

@@ -3,6 +3,7 @@
 #include <vector>
 #include <math.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/osmesa.h>
@@ -83,7 +84,7 @@ void writeToPCD(char* filename,std::vector<Point> *pointcloud) {
 
 int main(int argc, char* argv[]) {
 	if (argc < 3) {
-		printf("Usage: ./zbuffer input.ply outputFolder\n");
+		printf("Usage: ./zbuffer input.ply [output.pcd,outputFolder]\n");
 		return 1;
 	}
 
@@ -91,6 +92,7 @@ int main(int argc, char* argv[]) {
 	std::vector<Triangle> faces;
 	std::vector<Point> pointcloud;
 	char buffer[128];
+	bool merge = opendir(argv[2]) == NULL;
 
 	readPLY(argv[1],&vertices,&faces);
 
@@ -152,7 +154,8 @@ int main(int argc, char* argv[]) {
 	printf("depth buffer bits %d\n",depthBits);
 
 	for (int k = 0; k < NUM_CAMERAS; k++) {
-		pointcloud.clear();
+		if (!merge)
+			pointcloud.clear();
 		float rx = rho * cos(theta);
 		float ry = rho * sin(theta);
 		theta += 2 * 3.14159265 / NUM_CAMERAS;
@@ -199,13 +202,18 @@ int main(int argc, char* argv[]) {
 			}
 		}
 //		printf("pointcloud: %lu\n",pointcloud.size());
-		if (pointcloud.size() > 0) {
+		if (!merge && pointcloud.size() > 0) {
 			sprintf(buffer,"%s/%d-cloud.pcd",argv[2],k);
 			writeToPCD(buffer,&pointcloud);
 		}
 	}
-	sprintf(buffer,"%s/vertex.pcd",argv[2]);
-	writeToPCD(buffer,&vertices);
+	if (merge && pointcloud.size() > 0) {
+		sprintf(buffer,"%s",argv[2]);
+		writeToPCD(buffer,&pointcloud);
+	}
+
+//	sprintf(buffer,"%s/vertex.pcd",argv[2]);
+//	writeToPCD(buffer,&vertices);
 
 	OSMesaDestroyContext(ctx);
 	return 0;

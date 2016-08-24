@@ -86,8 +86,8 @@ if use_linear:
 		proba[i] = 1 / (1 + np.exp(-proba[i]))
 		proba[i] = proba[i] / sum(proba[i])
 		proba_sorted = sorted(proba[i],reverse=True)
-		if proba_sorted[0] < 0.4 or proba_sorted[0] / proba_sorted[1] < 2:
-			prediction[i] = 0
+#		if proba_sorted[0] < 0.4 or proba_sorted[0] / proba_sorted[1] < 2:
+#			prediction[i] = 0
 else:
 	proba = svc.predict_proba(features['test'])
 print 'Accuracy %.2f%%' % (svc.score(features['test'],labels['test'])*100)
@@ -110,7 +110,7 @@ for c in classes:
 file.write('\n')
 for i in range(len(prediction)):
 	l = prediction[i]
-	file.write(str(l)+' ')
+	file.write(str(l))
 	for p in proba[i]:
-		file.write(str(p)+' ')
+		file.write(' '+str(p))
 	file.write('\n')

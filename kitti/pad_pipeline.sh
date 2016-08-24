@@ -1,13 +1,17 @@
 #!/bin/bash
 
 input_dir=/home/jd/Documents/PointCloudApp/cloud/assets/crane
-output_dir=/home/jd/Documents/PointCloudApp/cloud/assets/crane2
-cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/truck/mixed
+#output_dir=/home/jd/Documents/PointCloudApp/cloud/compact_equipment/clusters8
+output_dir=/home/jd/Documents/PointCloudApp/cloud/review/test
+#cad_dir=/home/jd/Documents/PointCloudApp/cloud/caterpillar/mixed_pose
+cad_dir=/home/jd/Documents/PointCloudApp/cloud/review/train
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 svm_dir=/home/jd/Downloads/libsvm-3.20
-PAD=/home/jd/Documents/PointCloudApp/pad3d
+#DESC_EXE=/home/jd/Documents/PointCloudApp/pad3d
+DESC_EXE=/home/jd/Documents/PointCloudApp/tools/esf
+DESC=`basename $DESC_EXE`
 SIZE=/home/jd/Documents/PointCloudApp/size_filter
-computeDescriptors=false
+computeDescriptors=true
 computeFilter=false
 
 if $computeFilter
@@ -18,19 +22,19 @@ fi
 
 if $computeDescriptors
 then
-	rm $cad_dir/*-pad.pcd
+	rm $cad_dir/*-$DESC.pcd
 	for j in $cad_dir/*-cloud.pcd
 	do
-		$PAD $j
+		$DESC_EXE $j
 	done
-	$script_dir/writeLabels.py $cad_dir
+	$script_dir/writeLabels.py $cad_dir $DESC
 
-	rm $output_dir/*-pad.pcd
+	rm $output_dir/*-$DESC.pcd
 	for j in $output_dir/*-cloud.pcd
 	do
-		$PAD $j
+		$DESC_EXE $j
 	done
-	$script_dir/writeLabels.py $output_dir
+	$script_dir/writeLabels.py $output_dir $DESC
 fi
 
 rm $output_dir/svm_train_data.txt $output_dir/svm_test_data.txt
