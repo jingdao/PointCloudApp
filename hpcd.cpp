@@ -1572,26 +1572,9 @@ int main(int argc,char* argv[]) {
 	sprintf(buf,"%s/param.txt",outDir);
 	writeParam(buf,cloud,cloud->leafSize,cloud->leafSize,cloud->numPoints/1000,cloud->numPoints/2);
 #endif
-	std::vector<Point> plane;
-	plane.clear();
-	extractPlane(cloud,0.1,10000,0.5,&plane);
-	sprintf(buf,"%s/plane1.pcd",outDir);
-	HPCD_writePoints(buf,&plane);
+	segmentLowest(cloud);
+	segmentLowest(cloud);
 	HPCD_resize(cloud);
-	plane.clear();
-	extractPlane(cloud,0.1,10000,0.5,&plane);
-	sprintf(buf,"%s/plane2.pcd",outDir);
-	HPCD_writePoints(buf,&plane);
-	HPCD_resize(cloud);
-	plane.clear();
-	extractPlane(cloud,0.1,10000,0.5,&plane);
-	sprintf(buf,"%s/plane3.pcd",outDir);
-	HPCD_writePoints(buf,&plane);
-	HPCD_resize(cloud);
-//	segmentLowest(cloud);
-//	segmentLowest(cloud);
-//	segmentLowest(cloud);
-//	calculateCurvature(cloud,0);
 #if PROFILE
 	clock_gettime(CLOCK_MONOTONIC,&toc);
 	printf("Profile (Ground segmentation): %f\n",toc.tv_sec - tic.tv_sec + 0.000000001 * toc.tv_nsec - 0.000000001 * tic.tv_nsec);
@@ -1604,7 +1587,7 @@ int main(int argc,char* argv[]) {
 	std::vector<std::vector<int> > indices;
 	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
 #else
-	int numClusters = 12;
+	int numClusters = 200;
 //	euclideanClustering(cloud,numClusters);
 	euclideanClusteringXY(cloud,numClusters);
 //	colorClustering(cloud,numClusters);

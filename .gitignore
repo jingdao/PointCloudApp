@@ -24,6 +24,7 @@
 !occ_grid.cpp
 !size_filter.cpp
 !zbuffer.cpp
+!bow.cpp
 !plyheader
 !kitti
 kitti/*
@@ -66,6 +67,8 @@ tools/*
 !tools/grsd.hpp
 !tools/grsd.cpp
 !tools/curvature.cpp
+!tools/fpfh.cpp
+!tools/spin_image.cpp
 !tools/CMakeLists.txt
 !benchmark
 benchmark/*

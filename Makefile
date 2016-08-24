@@ -73,6 +73,9 @@ size_filter: size_filter.cpp
 zbuffer: zbuffer.cpp
 	$(CXX) -ggdb3 -o $@ $< -lGLU -lOSMesa
 
+bow: bow.cpp
+	$(CXX) -ggdb3 -o $@ $<
+
 debug: main
 
 single: all
