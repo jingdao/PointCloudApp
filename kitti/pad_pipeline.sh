@@ -7,8 +7,9 @@ output_dir=/home/jd/Documents/PointCloudApp/cloud/review/test
 cad_dir=/home/jd/Documents/PointCloudApp/cloud/review/train
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 svm_dir=/home/jd/Downloads/libsvm-3.20
-#DESC_EXE=/home/jd/Documents/PointCloudApp/pad3d
-DESC_EXE=/home/jd/Documents/PointCloudApp/tools/esf
+DESC_EXE=/home/jd/Documents/PointCloudApp/pad3d
+#DESC_EXE=/home/jd/Documents/PointCloudApp/tools/esf
+#DESC_EXE=/home/jd/Documents/PointCloudApp/tools/vfh
 DESC=`basename $DESC_EXE`
 SIZE=/home/jd/Documents/PointCloudApp/size_filter
 computeDescriptors=true
@@ -42,7 +43,8 @@ cp $cad_dir/svmdata.txt $output_dir/svm_train_data.txt
 cp $output_dir/svmdata.txt $output_dir/svm_test_data.txt
 $svm_dir/svm-scale -l 0 -u 1 -s $output_dir/range.txt $output_dir/svm_train_data.txt > $output_dir/svm_train_scaled.txt 2>/dev/null
 $svm_dir/svm-scale -r $output_dir/range.txt $output_dir/svm_test_data.txt > $output_dir/svm_test_scaled.txt 2>/dev/null
-$script_dir/svc.py $output_dir
+#$script_dir/svc.py $output_dir
+$script_dir/igm.py $output_dir
 cat $output_dir/svm_prediction.txt | tail -n +2 > $output_dir/prediction.txt
 
 $script_dir/countScore.py $output_dir

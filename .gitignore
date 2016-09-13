@@ -49,6 +49,7 @@ kitti/*
 !kitti/adaboost.py
 !kitti/part_feature.py
 !kitti/pad_pipeline.sh
+!kitti/igm.py
 !tools
 tools/*
 !tools/esf.cpp

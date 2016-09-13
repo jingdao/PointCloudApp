@@ -751,6 +751,23 @@ std::vector<float> getPartFeature(HPCD* cloud) {
 			density[xi][zi][yi] = true;
 		}
 	}
+	//Axes Length
+	gridLength[0] *= cloud->leafSize;
+	gridLength[1] *= cloud->leafSize;
+	gridLength[2] *= cloud->leafSize;
+	if (gridLength[2] > 50) {
+		gridLength[0] *= 0.0254;
+		gridLength[1] *= 0.0254;
+		gridLength[2] *= 0.0254;
+	}
+	if (gridLength[0] > gridLength[1]) {
+		feature.push_back(gridLength[0]);
+		feature.push_back(gridLength[1]);
+	} else {
+		feature.push_back(gridLength[1]);
+		feature.push_back(gridLength[0]);
+	}
+	feature.push_back(gridLength[2]);
 	//Dimensional Variation
 	if (dim.width < dim.height)
 		feature.push_back(1.0 * dim.length / dim.width);
