@@ -22,7 +22,7 @@ main(int argc, char** argv)
 		return -1;
 	}
 	char outputFile[128];
-	sprintf(outputFile,"%s-esf.pcd",argv[1]);
+	sprintf(outputFile,"%s-vfh.pcd",argv[1]);
 
 	double lsize = 1.0;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr obj_filtered(new pcl::PointCloud<pcl::PointXYZ>);

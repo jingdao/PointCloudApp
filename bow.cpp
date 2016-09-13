@@ -5,9 +5,10 @@
 #include <unistd.h>
 #include <time.h>
 #include <vector>
-#define DEBUG 1
 
 int num_vocab = 5;
+float mse = 0;
+bool debug = false;
 
 float getDiff(float* d1, float* d2, int descSize) {
 	float f = 0;
@@ -86,14 +87,85 @@ bool loadFileToDictionary(char* name, std::vector<float*> *dict, int* numDesc, i
 	return true;
 }
 
+int classify1NN(float* desc, float** bags, int* labels, int numLabels, int descSize) {
+	int minID=0;
+	float minD = getDiff(desc,bags[0],descSize);
+	for (int j=1;j<numLabels;j++) {
+		float d = getDiff(desc,bags[j],descSize);
+		if (d<minD) {
+			minD = d;
+			minID = j;
+		}
+	}
+	return labels[minID];
+}
+
+int validate1NN(int valID, float* desc, float** bags, int* labels, int numLabels, int descSize) {
+	int minID=-1;
+	float minD;
+	for (int j=0;j<numLabels;j++) {
+		if (valID == j)
+			continue;
+		float d = getDiff(desc,bags[j],descSize);
+		if (minID<0 || d<minD) {
+			minD = d;
+			minID = j;
+		}
+	}
+	return labels[minID];
+}
+
+int classifyVoting(float* desc, float** bags, int* labels, int numLabels, int descSize, int* maxCount, int numCategories, float threshold) {
+	int majority = 0;
+	*maxCount = 0;
+	int* count = new int[numCategories]();
+	for (int i=0;i<numLabels;i++) {
+		float d = getDiff(desc,bags[i],descSize);
+		if (d < threshold) {
+			count[labels[i]-1]++;
+			if (count[labels[i]-1] > *maxCount) {
+				*maxCount = count[labels[i]-1];
+				majority = labels[i];
+			}
+		}
+	}
+	delete[] count;
+	return majority;
+}
+
+int validateVoting(int valID, float* desc, float** bags, int* labels, int numLabels, int descSize, int* maxCount, int numCategories, float threshold) {
+	int majority = 0;
+	*maxCount = 0;
+	int* count = new int[numCategories]();
+	for (int i=0;i<numLabels;i++) {
+		if (valID == i)
+			continue;
+		float d = getDiff(desc,bags[i],descSize);
+		if (d < threshold) {
+			count[labels[i]-1]++;
+			if (count[labels[i]-1] > *maxCount) {
+				*maxCount = count[labels[i]-1];
+				majority = labels[i];
+			}
+		}
+	}
+	delete[] count;
+	return majority;
+}
+
 int main(int argc, char* argv[] ) {
 
 	if (argc < 4) {
-		printf("%s train/ test/ {fpfh,spin} [num_vocab]\n",argv[0]);
+		printf("%s train/ test/ {fpfh,spin} [num_vocab] [MSE] [-v]\n",argv[0]);
 		return 1;
 	}
 	if (argc >= 5)
 		num_vocab = atoi(argv[4]);
+	if (argc >= 6)
+		mse = atof(argv[5]);
+	for (int i=4;i<argc;i++)
+		if (strncmp(argv[i],"-v",2)==0)
+			debug = true;
 	srand(0);
 
 	//load train data
@@ -126,9 +198,8 @@ int main(int argc, char* argv[] ) {
 		} else
 			break;
 	}
-#if DEBUG
-	printf("Loaded %lu train descriptors (dimension %d)\n",dictionary.size(),descSize);
-#endif
+	if (debug)
+		printf("Loaded %lu train descriptors (dimension %d)\n",dictionary.size(),descSize);
 
 	//load test data
 	std::vector<float*> test_dictionary;
@@ -156,9 +227,8 @@ int main(int argc, char* argv[] ) {
 		} else
 			break;
 	}
-#if DEBUG
-	printf("Loaded %lu test descriptors (dimension %d)\n",test_dictionary.size(),descSize);
-#endif
+	if (debug)
+		printf("Loaded %lu test descriptors (dimension %d)\n",test_dictionary.size(),descSize);
 
 	
 	//perform K Means to get Vocabulary
@@ -187,39 +257,29 @@ int main(int argc, char* argv[] ) {
 			bags[i][minID] += 1;
 			count++;
 		}
-#if DEBUG
-		printf("Obj %2lu (class %d desc %3d):",i,labels[i],intervals[i]);
-#endif
+		if (debug)
+			printf("Obj %2lu (class %d desc %3d):",i,labels[i],intervals[i]);
 		for (int j=0;j<num_vocab;j++) {
 			bags[i][j] /= count;
-#if DEBUG
-			printf(" %.3f",bags[i][j]);
-#endif
+			if (debug)
+				printf(" %.3f",bags[i][j]);
 		}
-#if DEBUG
-		printf("\n");
-#endif
+		if (debug)
+			printf("\n");
 	}
 
 	//compute Validation Error
 	int numCorrect=0;
 	for (size_t i=0;i<labels.size();i++) {
-		int minID=-1;
-		float minD;
-		for (size_t j=0;j<labels.size();j++) {
-			if (j!=i) {
-				float d = getDiff(bags[i],bags[j],num_vocab);
-				if (minID<0 || d <minD) {
-					minD = d;
-					minID = j;
-				}
-			}
-		}
-		if (labels[i] == labels[minID])
+		int neighbors = 1, prediction;
+		if (mse > 0)
+			prediction = validateVoting(i,bags[i],bags,labels.data(),labels.size(),num_vocab,&neighbors,numCategories,mse * num_vocab);
+		else
+			prediction = validate1NN(i,bags[i],bags,labels.data(),labels.size(),num_vocab);
+		if (labels[i] == prediction)
 			numCorrect++;
-#if DEBUG
-		printf("Obj %2lu match %2d err %.4f %s\n",i,minID,minD,labels[i]==labels[minID] ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
-#endif
+		if (debug)
+			printf("Obj %2lu match %2d neighbors %d %s\n",i,prediction,neighbors,labels[i]==prediction ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
 	}
 	printf("K=%2d validation accuracy: %2d/%2lu (%.2f)\n",num_vocab,numCorrect,labels.size(),1.0 * numCorrect / labels.size());
 
@@ -249,29 +309,23 @@ int main(int argc, char* argv[] ) {
 		for (int j=0;j<num_vocab;j++) {
 			test_bag[j] /= count;
 		}
-		minID=0;
-		minD = getDiff(test_bag,bags[0],num_vocab);
-		for (int j=1;j<labels.size();j++) {
-			float d = getDiff(test_bag,bags[j],num_vocab);
-			if (d<minD) {
-				minD = d;
-				minID = j;
-			}
-		}
+		int neighbors = 1,prediction;
+		if (mse > 0)
+			prediction = classifyVoting(test_bag,bags,labels.data(),labels.size(),num_vocab,&neighbors,numCategories,mse * num_vocab);
+		else
+			prediction = classify1NN(test_bag,bags,labels.data(),labels.size(),num_vocab);
 		numSamples[test_labels[i]-1]++;
-		if (labels[minID] == test_labels[i]) {
+		if (prediction == test_labels[i]) {
 			TP[test_labels[i]-1]++;
 			numCorrect++;
 		}
-#if DEBUG
-		printf("Test %2lu match %2d err %.4f %s\n",i,minID,minD,test_labels[i]==labels[minID] ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
-#endif
+		if (debug)
+			printf("Test %2lu match %2d neighbors %2d %s\n",i,prediction,neighbors,test_labels[i]==prediction ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
 	}
 	printf("K=%2d test accuracy: %2d/%2lu (%.2f)\n",num_vocab,numCorrect,test_labels.size(),1.0 * numCorrect / test_labels.size());
-#if DEBUG
-	for (int i=0;i<numCategories;i++)
-		printf("class %d (%2d samples): %2d (%.2f)\n",i+1,numSamples[i],TP[i],1.0 * TP[i] / numSamples[i]);
-#endif
+	if (debug)
+		for (int i=0;i<numCategories;i++)
+			printf("class %d (%2d samples): %2d (%.2f)\n",i+1,numSamples[i],TP[i],1.0 * TP[i] / numSamples[i]);
 
 	delete[] match;
 	delete[] test_bag;

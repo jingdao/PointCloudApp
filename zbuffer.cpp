@@ -8,7 +8,7 @@
 #include <GL/glu.h>
 #include <GL/osmesa.h>
 #define NUM_CAMERAS 4
-#define RESOLUTION 400
+#define RESOLUTION 600
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
 
@@ -154,8 +154,8 @@ int main(int argc, char* argv[]) {
 	printf("depth buffer bits %d\n",depthBits);
 
 	for (int k = 0; k < NUM_CAMERAS; k++) {
-		if (!merge)
-			pointcloud.clear();
+//		if (!merge)
+//			pointcloud.clear();
 		float rx = rho * cos(theta);
 		float ry = rho * sin(theta);
 		theta += 2 * 3.14159265 / NUM_CAMERAS;
@@ -203,8 +203,17 @@ int main(int argc, char* argv[]) {
 		}
 //		printf("pointcloud: %lu\n",pointcloud.size());
 		if (!merge && pointcloud.size() > 0) {
-			sprintf(buffer,"%s/%d-cloud.pcd",argv[2],k);
-			writeToPCD(buffer,&pointcloud);
+			int n=0;
+			while (true) {
+				sprintf(buffer,"%s/%d-cloud.pcd",argv[2],n);
+				FILE* f = fopen(buffer,"r");
+				if (!f) {
+					writeToPCD(buffer,&pointcloud);
+					break;
+				}
+				fclose(f);
+				n++;
+			}
 		}
 	}
 	if (merge && pointcloud.size() > 0) {

@@ -73,7 +73,7 @@ int main (int argc, char** argv)
 	}
 	voxel_grid(cloud);
 //	writer.write<pcl::PointXYZ> ("grid.pcd", *cloud, false);
-	std::cout << "Loaded " << cloud->points.size() << " points." << std::endl;
+//	std::cout << "Loaded " << cloud->points.size() << " points." << std::endl;
 
 	// Compute the normals
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimation;
@@ -100,7 +100,7 @@ int main (int argc, char** argv)
 
 	// Actually compute the spin images
 	spinImageEstimation.compute (*spinImages);
-	std::cout << "SI output points.size (): " << spinImages->points.size () << std::endl;
+//	std::cout << "SI output points.size (): " << spinImages->points.size () << std::endl;
 
 	// Display and retrieve the spin image descriptor vector for the first point.
 //	SpinImage descriptor = spinImages->points[0];

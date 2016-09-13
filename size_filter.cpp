@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include "lapack.h"
+#define MARGIN 0.3
 
 struct PCD {
 	int numPoints;
@@ -275,7 +276,7 @@ int main(int argc,char* argv[]) {
 				getPCA_XY(p,lambda,v);
 				setPCA(p,lambda,v,principalLengths,principalAxes,bbCenter);
 				float comHeight = getCenterOfMassHeight(p);
-//				printf("Loaded %13s %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f\n",
+//				printf("Loaded %13s %6.2f %6.2f %6.2f\n",
 //					file_name,principalLengths[0],principalLengths[1],principalLengths[2]);
 				if (principalLengths[2] > 50) {
 					principalLengths[0] *= 0.0254;
@@ -305,6 +306,14 @@ int main(int argc,char* argv[]) {
 			}
 		}
 	}
+	minX *= (1 - MARGIN);
+	minY *= (1 - MARGIN);
+	minZ *= (1 - MARGIN);
+	minH *= (1 - MARGIN);
+	maxX *= (1 + MARGIN);
+	maxY *= (1 + MARGIN);
+	maxZ *= (1 + MARGIN);
+	maxH *= (1 + MARGIN);
 	printf("Trained %d samples (%5.2f-%5.2f) (%5.2f-%5.2f) (%5.2f-%5.2f) (%5.2f,%5.2f)\n",num_train,minX,maxX,minY,maxY,minZ,maxZ,minH,maxH);
 
 	std::vector<float> outlier_points;
@@ -359,11 +368,13 @@ int main(int argc,char* argv[]) {
 					principalLengths[2]>minZ && principalLengths[2]<maxZ
 					/*&& comHeight>minH && comHeight<maxH*/) {
 					sprintf(command,"cp %s %s/%d-cloud.pcd",buffer,argv[3],inliers);
-					printf("%13s %5.2f %5.2f %5.2f %5.2f\n",file_name,
+					printf("%13s %5.2f %5.2f %5.2f %5.2f \033[32m/\033[0m\n",file_name,
 						principalLengths[0],principalLengths[1],principalLengths[2], comHeight);
 					system(command);
 					inliers++;
 				} else {
+					printf("%13s %5.2f %5.2f %5.2f %5.2f \033[31mx\033[0m\n",file_name,
+						principalLengths[0],principalLengths[1],principalLengths[2], comHeight);
 					outliers++;
 					if (background)
 						addPointsToVector(p,&outlier_points);

@@ -70,6 +70,8 @@ tools/*
 !tools/curvature.cpp
 !tools/fpfh.cpp
 !tools/spin_image.cpp
+!tools/shot.cpp
+!tools/usc.cpp
 !tools/CMakeLists.txt
 !benchmark
 benchmark/*
