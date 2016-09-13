@@ -79,6 +79,9 @@ bow: bow.cpp
 intensity_scan: intensity_scan.cpp
 	$(CXX) -ggdb3 -o $@ $<
 
+downsample_pts: downsample_pts.cpp
+	$(CXX) -ggdb3 -o $@ $<
+
 debug: main
 
 single: all

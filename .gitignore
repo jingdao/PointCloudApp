@@ -26,6 +26,7 @@
 !zbuffer.cpp
 !bow.cpp
 !intensity_scan.cpp
+!downsample_pts.cpp
 !plyheader
 !kitti
 kitti/*
