@@ -76,6 +76,9 @@ zbuffer: zbuffer.cpp
 bow: bow.cpp
 	$(CXX) -ggdb3 -o $@ $<
 
+intensity_scan: intensity_scan.cpp
+	$(CXX) -ggdb3 -o $@ $<
+
 debug: main
 
 single: all

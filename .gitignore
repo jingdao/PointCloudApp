@@ -25,6 +25,7 @@
 !size_filter.cpp
 !zbuffer.cpp
 !bow.cpp
+!intensity_scan.cpp
 !plyheader
 !kitti
 kitti/*
