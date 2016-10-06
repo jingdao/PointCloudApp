@@ -2,7 +2,7 @@
 #include <pcl/features/shot.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/normal_3d.h>
-#define NUM_BIN 20
+#define NUM_BIN 50
 
 void voxel_grid(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 	float minX = cloud->points[0].x;
@@ -54,7 +54,6 @@ void voxel_grid(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 	}
 	cloud->width = cloud->points.size();
 }
-
 int main(int argc, char** argv) {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal> ());

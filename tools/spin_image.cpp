@@ -5,7 +5,7 @@
 #include <pcl/point_types.h>
 #include <pcl/features/spin_image.h>
 #include <pcl/features/normal_3d.h>
-#define NUM_BIN 20
+#define NUM_BIN 50
 
 void voxel_grid(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 	float minX = cloud->points[0].x;

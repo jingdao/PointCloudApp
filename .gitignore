@@ -51,6 +51,7 @@ kitti/*
 !kitti/part_feature.py
 !kitti/pad_pipeline.sh
 !kitti/igm.py
+!kitti/computation.sh
 !tools
 tools/*
 !tools/esf.cpp
@@ -93,6 +94,7 @@ cloud/*
 !cloud/rotatepcd.py
 !cloud/concat_esf.py
 !cloud/filterpcd.py
+!cloud/addnoise.py
 !obstruction
 obstruction/*
 !obstruction/process_bounding_box.py

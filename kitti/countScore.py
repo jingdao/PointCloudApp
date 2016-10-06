@@ -78,6 +78,8 @@ for i in range(start,end+1,inc):
 			except ValueError:
 				break
 			prob = prediction.readline().split()
+			if len(prob)==0:
+				break
 			p = int(prob[0])
 			if ignoreZeros and (l==0 or p==0):
 				continue

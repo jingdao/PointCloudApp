@@ -82,6 +82,8 @@ else:
 prediction = svc.predict(features['test'])
 if use_linear:
 	proba = svc.decision_function(features['test'])
+	if len(proba.shape)==1:
+		proba = np.vstack((proba,1-proba)).transpose()
 	for i in range(len(proba)):
 		proba[i] = 1 / (1 + np.exp(-proba[i]))
 		proba[i] = proba[i] / sum(proba[i])

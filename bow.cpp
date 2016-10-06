@@ -6,6 +6,7 @@
 #include <time.h>
 #include <vector>
 
+int num_class = 5;
 int num_vocab = 5;
 float mse = 0;
 bool debug = false;
@@ -153,19 +154,42 @@ int validateVoting(int valID, float* desc, float** bags, int* labels, int numLab
 	return majority;
 }
 
+void saveBOW(char* fileName, float* bag) {
+	FILE* f = fopen(fileName,"w");
+	fprintf(f,"# .PCD v0.7 - Point Cloud Data file format\n"
+		"VERSION 0.7\n"
+		"FIELDS esf\n"
+		"SIZE 4\n"
+		"TYPE F\n"
+		"COUNT %d\n"
+		"WIDTH 1\n"
+		"HEIGHT 1\n"
+		"VIEWPOINT 0 0 0 1 0 0 0\n"
+		"POINTS 1\n"
+		"DATA ascii\n",num_vocab);
+	for (int i=0;i<num_vocab;i++)
+		fprintf(f,"%f ",bag[i]);
+	fprintf(f,"\n");
+	fclose(f);
+}
+
 int main(int argc, char* argv[] ) {
 
 	if (argc < 4) {
-		printf("%s train/ test/ {fpfh,spin} [num_vocab] [MSE] [-v]\n",argv[0]);
+		printf("%s train/ test/ {fpfh,spin} [-n num_vocab] [-m MSE] [-c num_class] [-v]\n",argv[0]);
 		return 1;
 	}
-	if (argc >= 5)
-		num_vocab = atoi(argv[4]);
-	if (argc >= 6)
-		mse = atof(argv[5]);
-	for (int i=4;i<argc;i++)
+	for (int i=4;i<argc;i++) {
 		if (strncmp(argv[i],"-v",2)==0)
 			debug = true;
+		else if (strncmp(argv[i],"-n",2)==0)
+			num_vocab = atoi(argv[i+1]);
+		else if (strncmp(argv[i],"-m",2)==0)
+			mse = atof(argv[i+1]);
+		else if (strncmp(argv[i],"-c",2)==0)
+			num_class = atoi(argv[i+1]);
+	}
+	bool test_only = argc >= 5 && !debug;
 	srand(0);
 
 	//load train data
@@ -182,6 +206,8 @@ int main(int argc, char* argv[] ) {
 	}
 	while (fgets(buf,128,labelFile)) {
 		int l = strtol(buf,NULL,10);
+		if (l > num_class)
+			break;
 		labels.push_back(l);
 		if (l > numCategories)
 			numCategories = l;
@@ -189,7 +215,7 @@ int main(int argc, char* argv[] ) {
 	fclose(labelFile);
 	int id=0;
 	int descSize=0;
-	while (true) {
+	while (id < labels.size()) {
 		int numDesc=0;
 		sprintf(buf,"%s/%d-cloud.pcd-%s.pcd",argv[1],id,argv[3]);
 		if (loadFileToDictionary(buf,&dictionary,&numDesc,&descSize)) {
@@ -213,12 +239,14 @@ int main(int argc, char* argv[] ) {
 	}
 	while (fgets(buf,128,labelFile)) {
 		int l = strtol(buf,NULL,10);
+		if (l > num_class)
+			break;
 		test_labels.push_back(l);
 	}
 	fclose(labelFile);
 	id=0;
 	descSize=0;
-	while (true) {
+	while (id < test_labels.size()) {
 		int numDesc=0;
 		sprintf(buf,"%s/%d-cloud.pcd-%s.pcd",argv[2],id,argv[3]);
 		if (loadFileToDictionary(buf,&test_dictionary,&numDesc,&descSize)) {
@@ -266,22 +294,26 @@ int main(int argc, char* argv[] ) {
 		}
 		if (debug)
 			printf("\n");
+		sprintf(buf,"%s/%lu-cloud.pcd-%s-bow.pcd",argv[2],i,argv[3]);
+//		saveBOW(buf,bags[i]);
 	}
 
 	//compute Validation Error
 	int numCorrect=0;
-	for (size_t i=0;i<labels.size();i++) {
-		int neighbors = 1, prediction;
-		if (mse > 0)
-			prediction = validateVoting(i,bags[i],bags,labels.data(),labels.size(),num_vocab,&neighbors,numCategories,mse * num_vocab);
-		else
-			prediction = validate1NN(i,bags[i],bags,labels.data(),labels.size(),num_vocab);
-		if (labels[i] == prediction)
-			numCorrect++;
-		if (debug)
-			printf("Obj %2lu match %2d neighbors %d %s\n",i,prediction,neighbors,labels[i]==prediction ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
+	if (!test_only) {
+		for (size_t i=0;i<labels.size();i++) {
+			int neighbors = 1, prediction;
+			if (mse > 0)
+				prediction = validateVoting(i,bags[i],bags,labels.data(),labels.size(),num_vocab,&neighbors,numCategories,mse * num_vocab);
+			else
+				prediction = validate1NN(i,bags[i],bags,labels.data(),labels.size(),num_vocab);
+			if (labels[i] == prediction)
+				numCorrect++;
+			if (debug)
+				printf("Obj %2lu match %2d neighbors %d %s\n",i,prediction,neighbors,labels[i]==prediction ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
+		}
+		printf("K=%2d validation accuracy: %2d/%2lu (%.2f)\n",num_vocab,numCorrect,labels.size(),1.0 * numCorrect / labels.size());
 	}
-	printf("K=%2d validation accuracy: %2d/%2lu (%.2f)\n",num_vocab,numCorrect,labels.size(),1.0 * numCorrect / labels.size());
 
 	//compute Test Error
 	numCorrect=0;
@@ -322,8 +354,11 @@ int main(int argc, char* argv[] ) {
 		if (debug)
 			printf("Test %2lu match %2d neighbors %2d %s\n",i,prediction,neighbors,test_labels[i]==prediction ? "\033[32m/\033[0m" : "\033[31mx\033[0m");
 	}
-	printf("K=%2d test accuracy: %2d/%2lu (%.2f)\n",num_vocab,numCorrect,test_labels.size(),1.0 * numCorrect / test_labels.size());
-	if (debug)
+	if (test_only)
+		printf("%s K=%d %.2f%%\n",argv[3],num_vocab,100.0*numCorrect/test_labels.size());
+	else
+		printf("K=%2d test accuracy: %2d/%2lu (%.2f)\n",num_vocab,numCorrect,test_labels.size(),1.0 * numCorrect / test_labels.size());
+//	if (debug)
 		for (int i=0;i<numCategories;i++)
 			printf("class %d (%2d samples): %2d (%.2f)\n",i+1,numSamples[i],TP[i],1.0 * TP[i] / numSamples[i]);
 

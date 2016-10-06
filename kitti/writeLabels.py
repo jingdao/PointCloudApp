@@ -17,6 +17,8 @@ if os.path.isfile(dir+'/labels.txt'):
 outfile = open(dir+'/svmdata.txt','w')
 if labels is None:
 	maxN = 100
+elif len(sys.argv) >= 4:
+	maxN = int(sys.argv[3])
 else:
 	maxN = len(labels)
 for n in range(maxN):
@@ -38,7 +40,7 @@ for n in range(maxN):
 		n += 1
 	outfile.write('\n')
 	
-print 'Wrote labels to '+outfile.name
+print 'Wrote '+str(maxN)+' labels to '+outfile.name
 outfile.close()
 	
 
