@@ -27,6 +27,8 @@
 !bow.cpp
 !intensity_scan.cpp
 !downsample_pts.cpp
+!getSphere.cpp
+!planeCornerRegistration.cpp
 !plyheader
 !kitti
 kitti/*
@@ -95,6 +97,7 @@ cloud/*
 !cloud/concat_esf.py
 !cloud/filterpcd.py
 !cloud/addnoise.py
+!cloud/extractElement.py
 !obstruction
 obstruction/*
 !obstruction/process_bounding_box.py

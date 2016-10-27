@@ -7,8 +7,9 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/osmesa.h>
-#define NUM_CAMERAS 4
-#define RESOLUTION 600
+#define NUM_CAMERAS 8
+#define RESOLUTION 1000
+#define INCLUDE_TOP 1
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
 
@@ -153,7 +154,8 @@ int main(int argc, char* argv[]) {
 	glGetIntegerv(GL_DEPTH_BITS, &depthBits);
 	printf("depth buffer bits %d\n",depthBits);
 
-	for (int k = 0; k < NUM_CAMERAS; k++) {
+	int numViews = INCLUDE_TOP ? NUM_CAMERAS + 2 : NUM_CAMERAS;
+	for (int k = 0; k < numViews; k++) {
 //		if (!merge)
 //			pointcloud.clear();
 		float rx = rho * cos(theta);
@@ -162,7 +164,12 @@ int main(int argc, char* argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		gluLookAt(rx,ry, cameraZ, 0,0,0, 0,0,1);
+		if (k < NUM_CAMERAS)
+			gluLookAt(rx,ry, cameraZ, 0,0,0, 0,0,1);
+		else if (k == NUM_CAMERAS)
+			gluLookAt(0,0, cameraZ*4, 0,0,0, 1,0,0);
+		else if (k == NUM_CAMERAS + 1)
+			gluLookAt(0,0, -cameraZ*4, 0,0,0, 1,0,0);
 		GLfloat R[16] =  {};
 		glGetFloatv(GL_MODELVIEW_MATRIX, R);
 //		printf("%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n",R[0],R[1],R[2],R[3],R[4],R[5],R[6],R[7],R[8],R[9],R[10],R[11],R[12],R[13],R[14],R[15]);

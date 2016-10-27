@@ -3,6 +3,7 @@ CXXFLAGS  = -O2 -std=c++11
 INCLUDE_DIRS = /usr/local/include/pcl-1.7 /usr/local/include/eigen3
 INC = $(INCLUDE_DIRS:%=-I%)
 LIB_DIRS = -L/usr/local/lib
+DEMO_DIR = /media/jd/9638A1E538A1C519/wxWidgets-3.1.0/samples/opengl/isarc_demo/
 LDFLAGS = -lpcl_segmentation -lpcl_io -lpcl_common -lboost_system
 LDFLAGS2 = -lpcl_io -lpcl_common -lpcl_features -lpcl_search -lpcl_keypoints -lpcl_recognition -lpcl_visualization -lpcl_kdtree -lboost_system -lvtkCommonDataModel-6.2 -lvtkCommonCore-6.2 -lvtkCommonMath-6.2 -lvtkRenderingCore-6.2
 debug: CXXFLAGS = -ggdb3 -O0 -Wall -std=c++11
@@ -80,6 +81,12 @@ intensity_scan: intensity_scan.cpp
 	$(CXX) -ggdb3 -o $@ $<
 
 downsample_pts: downsample_pts.cpp
+	$(CXX) -ggdb3 -o $@ $<
+
+getSphere: getSphere.cpp
+	$(CXX) -ggdb3 -o $@ -I$(DEMO_DIR) $(DEMO_DIR)/ISARC_demo.cpp $< -lGL -lGLU -llapack
+
+planeCornerRegistration: planeCornerRegistration.cpp
 	$(CXX) -ggdb3 -o $@ $<
 
 debug: main
