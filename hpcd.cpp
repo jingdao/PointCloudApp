@@ -811,6 +811,8 @@ void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<float> *float_data
 	}
 	for (int i=0;i<numClusters;i++) {
 		size_t clusterSize = clusters[i].size() / 3;
+		if (clusterSize == 0)
+			break;
 		sprintf(buffer,"%s/%d-cloud.pcd",outDir,i);
 		FILE* f = fopen(buffer, "w");
 		if (!f) {

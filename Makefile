@@ -89,6 +89,12 @@ getSphere: getSphere.cpp
 planeCornerRegistration: planeCornerRegistration.cpp
 	$(CXX) -ggdb3 -o $@ $<
 
+icp_registration: icp_registration.cpp
+	$(CXX) -ggdb3 -o $@ $< -llapack
+
+viz_building: viz_building.cpp
+	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU
+
 debug: main
 
 single: all

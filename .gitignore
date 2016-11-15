@@ -29,6 +29,7 @@
 !downsample_pts.cpp
 !getSphere.cpp
 !planeCornerRegistration.cpp
+!viz_building.cpp
 !plyheader
 !kitti
 kitti/*
