@@ -95,6 +95,9 @@ icp_registration: icp_registration.cpp
 viz_building: viz_building.cpp
 	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU
 
+thermal_seg: thermal_seg.cpp
+	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU
+
 debug: main
 
 single: all

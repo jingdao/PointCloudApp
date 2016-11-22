@@ -30,6 +30,7 @@
 !getSphere.cpp
 !planeCornerRegistration.cpp
 !viz_building.cpp
+!thermal_seg.cpp
 !plyheader
 !kitti
 kitti/*
