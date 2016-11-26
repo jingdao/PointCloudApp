@@ -7,6 +7,8 @@
 #include <SDL/SDL.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #define BASE_HASH_CONSTANT 0.618033988
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
@@ -40,7 +42,17 @@ enum PCD_data_storage {
 struct Cluster {
 	int index, size;
 };
+struct Feature {
+	float length,width,height,elevation;
+};
 
+FT_Library ft;
+FT_Face face;
+FT_GlyphSlot glyph;
+GLuint textures;
+const int labelWidth=80;
+const int labelHeight=30,fontpixels=20;
+unsigned char raster[labelWidth * labelHeight * 3];
 double cameraX=20,cameraY=20,cameraZ=10;
 double centerX=0,centerY=0,centerZ=0;
 double upX=0,upY=0,upZ=1;
@@ -49,6 +61,10 @@ int previousX,previousY;
 double scrollSpeed = 1.01;
 HPCD* source;
 std::vector< std::vector<float> > boxes;
+std::vector<Feature> features;
+std::vector<char*> classes;
+char* className[4] = {NULL,"person","display","light"};
+int classCount[4];
 
 inline int baseHash(int size, int hashKey) {
 	return (int)(size*((BASE_HASH_CONSTANT*hashKey) - (int)(BASE_HASH_CONSTANT*hashKey)));
@@ -652,6 +668,23 @@ void getPCA(std::vector<Point> *cloud, std::vector<float> *box) {
 			box->push_back(coords[j]);
 		}
 	}
+	Feature f = {
+		maxScale[0] - minScale[0],
+		maxScale[1] - minScale[1],
+		maxScale[2] - minScale[2],
+		bbCenter[2]
+	};
+//	printf("%f %f %f %f\n",f.length,f.width,f.height,f.elevation);
+	int classMember=0;
+	if (f.length > 0.3 && f.length < 2 && f.width > 0.3 && f.height > 0.5 && f.elevation < 0.5)
+		classMember=1;
+	else if (f.length > 1 && f.length < 5 && f.height > 0.5 && f.elevation < 1.5)
+		classMember=2;
+	else if (f.length < 0.4 && f.width < 0.3 && f.elevation > 0.7)
+		classMember=3;
+	classes.push_back(className[classMember]);
+	classCount[classMember]++;
+	features.push_back(f);
 }
 
 void getBoundingBox(HPCD* h) {
@@ -691,6 +724,38 @@ void drawLine(int i, int j, int k) {
 	glEnd();
 }
 
+void render_text(const char *text, unsigned char *data) {
+	memset(data,0,labelWidth*labelHeight*3);
+	const char *p;
+	unsigned char color[] = {255,255,255};
+	int x = 0;
+	for(p = text; *p; p++) {
+		if(FT_Load_Char(face, *p, FT_LOAD_RENDER))
+			continue;
+		unsigned char *src = glyph->bitmap.buffer;
+		int k=0;
+		for (int i=0;i<glyph->bitmap.rows;i++) {
+			unsigned char *dest = data + ((glyph->bitmap_top - i + fontpixels/2) * labelWidth + x + glyph->bitmap_left)* 3;
+			for (int j=0;j<glyph->bitmap.width;j++) {
+				memset(dest,*src,3); // draw in grayscale
+				//*dest = *src; //draw in red
+				src++;
+				dest+=3;
+			}
+		}
+		x += glyph->bitmap_left + glyph->bitmap.width;
+//		x += glyph->bitmap.width;
+		if (x >= labelWidth)
+			break;
+	}
+}
+
+void drawText(int i) {
+	glRasterPos3f((boxes[i][12] + boxes[i][15] + boxes[i][18] + boxes[i][21]) / 4, (boxes[i][13] + boxes[i][16] + boxes[i][19] + boxes[i][22]) / 4, boxes[i][14]);
+	render_text(classes[i],raster);
+	glDrawPixels(labelWidth,labelHeight,GL_RGB,GL_UNSIGNED_BYTE,raster);
+}
+
 void draw() {
 	glPushAttrib(GL_ALL_ATTRIB_BITS);
 	glPushMatrix();
@@ -698,6 +763,26 @@ void draw() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(cameraX,cameraY,cameraZ,centerX,centerY,centerZ,upX,upY,upZ);
+
+	glLineWidth(1.0);
+	glColor3ub(255, 255, 255);
+	for (int i = 0; i<boxes.size(); i++) {
+//		if (classes[i]) {
+			drawLine(i, 0, 1);
+			drawLine(i, 0, 2);
+			drawLine(i, 1, 3);
+			drawLine(i, 2, 3);
+			drawLine(i, 0, 4);
+			drawLine(i, 1, 5);
+			drawLine(i, 2, 6);
+			drawLine(i, 3, 7);
+			drawLine(i, 4, 5);
+			drawLine(i, 4, 6);
+			drawLine(i, 5, 7);
+			drawLine(i, 6, 7);
+//			drawText(i);
+//		}
+	}
 
 	glPointSize(1.0);
 	glBegin(GL_POINTS);
@@ -712,23 +797,6 @@ void draw() {
 		}
 	}
 	glEnd();
-
-	glLineWidth(1.0);
-	glColor3ub(255, 255, 255);
-	for (int i = 0; i<boxes.size(); i++) {
-		drawLine(i, 0, 1);
-		drawLine(i, 0, 2);
-		drawLine(i, 1, 3);
-		drawLine(i, 2, 3);
-		drawLine(i, 0, 4);
-		drawLine(i, 1, 5);
-		drawLine(i, 2, 6);
-		drawLine(i, 3, 7);
-		drawLine(i, 4, 5);
-		drawLine(i, 4, 6);
-		drawLine(i, 5, 7);
-		drawLine(i, 6, 7);
-	}
 
 	glFlush();
 	SDL_GL_SwapBuffers();
@@ -752,6 +820,11 @@ int main(int argc, char* argv[]) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(70,(double)640/480,1,1000);
+
+	FT_Init_FreeType(&ft);
+	FT_New_Face(ft,"/usr/share/fonts/truetype/freefont/FreeSans.ttf",0,&face);
+	FT_Set_Pixel_Sizes(face,fontpixels,fontpixels);
+	glyph = face->glyph;
 
 	source = HPCD_Init(argv[1],0.01);
 	HPCD* model = HPCD_Init(argv[1],0.1);
@@ -789,7 +862,10 @@ int main(int argc, char* argv[]) {
 			}
 		}
 	}
+	memset(classCount,0,4*sizeof(int));
 	getBoundingBox(model);
+	for (int i=0;i<4;i++)
+		printf("%s: %d\n",i==0 ? "None" : className[i], classCount[i]);
 
 
 	int interval = 10000;

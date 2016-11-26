@@ -96,7 +96,7 @@ viz_building: viz_building.cpp
 	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU
 
 thermal_seg: thermal_seg.cpp
-	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU
+	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU -lfreetype -I/usr/include/freetype2
 
 debug: main
 
