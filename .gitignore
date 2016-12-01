@@ -100,6 +100,7 @@ cloud/*
 !cloud/filterpcd.py
 !cloud/addnoise.py
 !cloud/extractElement.py
+!cloud/extractPrimitive.py
 !obstruction
 obstruction/*
 !obstruction/process_bounding_box.py
