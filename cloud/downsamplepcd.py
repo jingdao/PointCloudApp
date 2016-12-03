@@ -4,7 +4,7 @@ import sys
 import math
 
 if len(sys.argv) < 4:
-	print './scalepcd.py [input.pcd] [output.pcd] [resolution]'
+	print './downsamplepcd.py [input.pcd] [output.pcd] [resolution]'
 	sys.exit(1)
 
 infile = sys.argv[1]
