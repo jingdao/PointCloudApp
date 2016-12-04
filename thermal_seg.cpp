@@ -12,6 +12,8 @@
 #define BASE_HASH_CONSTANT 0.618033988
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
+#define USE_THERMAL 0
+#define DISPLAY_LABEL 1
 
 struct HPoint {
 	int x,y,z;
@@ -423,6 +425,7 @@ void HPCD_writePoints(char* filename,std::vector<Point> *points) {
 }
 
 Plane segmentPlane(HPCD* cloud,std::vector<Point> *filtered, int iter, float segThreshold, float inlierRatio) {
+	filtered->clear();
 	int maxInliers = 0;
 	int optimumInliers = (int) (inlierRatio * cloud->numPoints);
 	int distanceThreshold;
@@ -767,7 +770,9 @@ void draw() {
 	glLineWidth(1.0);
 	glColor3ub(255, 255, 255);
 	for (int i = 0; i<boxes.size(); i++) {
-//		if (classes[i]) {
+#if DISPLAY_LABEL
+		if (classes[i]) {
+#endif
 			drawLine(i, 0, 1);
 			drawLine(i, 0, 2);
 			drawLine(i, 1, 3);
@@ -780,8 +785,10 @@ void draw() {
 			drawLine(i, 4, 6);
 			drawLine(i, 5, 7);
 			drawLine(i, 6, 7);
-//			drawText(i);
-//		}
+#if DISPLAY_LABEL
+			drawText(i);
+		}
+#endif
 	}
 
 	glPointSize(1.0);
@@ -810,24 +817,15 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_WM_SetCaption("Point Cloud", NULL);
-	SDL_SetVideoMode(1800,1000, 32, SDL_OPENGL);
-    glEnable(GL_DEPTH_TEST);
-	glDisable(GL_LIGHTING);
-	glDisable(GL_CULL_FACE);
-	glPolygonMode(GL_FRONT, GL_FILL);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(70,(double)640/480,1,1000);
-
+	srand(0);
 	FT_Init_FreeType(&ft);
 	FT_New_Face(ft,"/usr/share/fonts/truetype/freefont/FreeSans.ttf",0,&face);
 	FT_Set_Pixel_Sizes(face,fontpixels,fontpixels);
 	glyph = face->glyph;
 
-	source = HPCD_Init(argv[1],0.01);
+	source = HPCD_Init(argv[1],0.1);
 	HPCD* model = HPCD_Init(argv[1],0.1);
+#if USE_THERMAL
 	int minIntensity=-1,maxIntensity=-1;
 	//absolute threshold
 	for (int i=0;i<model->maxSize;i++) {
@@ -847,26 +845,70 @@ int main(int argc, char* argv[]) {
 			}
 		}
 	}
+#else
+	std::vector<Point> filtered;
+	for (int i=0;i<10;i++)
+		segmentPlane(model,&filtered,1000,0.1,0.5);
+	for (int i=0;i<model->maxSize;i++) {
+		HPoint* h = model->data[i];
+		if (h)
+			h->label = 0;
+	}
+#endif
 	int n = euclideanClustering(model,3,100,1);
 	printf("%d clusters found\n",n);
-	for (int i=0;i<n;i++) {
-		int r = rand()%255;
-		int g = rand()%255;
-		int b = rand()%255;
-		for (int j=0;j<model->maxSize;j++) {
-			HPoint* h = model->data[j];
-			if (h && h->label == i) {
-				h->r = r;
-				h->g = g;
-				h->b = b;
-			}
-		}
-	}
 	memset(classCount,0,4*sizeof(int));
 	getBoundingBox(model);
 	for (int i=0;i<4;i++)
 		printf("%s: %d\n",i==0 ? "None" : className[i], classCount[i]);
+#if !USE_THERMAL
+	for (int i=0;i<n;i++) {
+		int r = rand()%255;
+		int g = rand()%255;
+		int b = rand()%255;
+		for (int j=0;j<source->maxSize;j++) {
+			HPoint* h = source->data[j];
+			if (h) {
+				int id = HPCD_find(model,
+					(int)(h->x*source->leafSize/model->leafSize),
+					(int)(h->y*source->leafSize/model->leafSize),
+					(int)(h->z*source->leafSize/model->leafSize));
+				if (id >= 0) {
+					if (model->data[id]->label == i) {
+#if DISPLAY_LABEL
+						if (classes[i]) {
+#endif
+						h->r = r;
+						h->g = g;
+						h->b = b;
+#if DISPLAY_LABEL
+						} else {
+							h->r = 100;
+							h->g = 100;
+							h->b = 100;
+						}
+#endif
+					}
+				} else {
+					h->r = 100;
+					h->g = 100;
+					h->b = 100;
+				}
+			}
+		}
+	}
+#endif
 
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_WM_SetCaption("Point Cloud", NULL);
+	SDL_SetVideoMode(1800,1000, 32, SDL_OPENGL);
+    glEnable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHTING);
+	glDisable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(70,(double)640/480,1,1000);
 
 	int interval = 10000;
 	SDL_Event event;
