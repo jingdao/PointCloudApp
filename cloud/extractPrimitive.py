@@ -3,23 +3,6 @@ import sys
 import numpy
 import matplotlib.pyplot as plt
 
-def diff(a,b):
-	return 1.0*(a-b)/b
-
-def findpeaks(A,limit):
-	peaks=[]
-	if A[0] > A[1]:
-		peaks.append((0,diff(A[0],A[1])))
-	for i in range(1,len(A)-1):
-		if A[i] > A[i-1] and A[i] > A[i+1]:
-			peaks.append((i,max(diff(A[i],A[i-1]),diff(A[i],A[i+1]))))
-	if A[-1] > A[-2]:
-		peaks.append((len(A)-1,diff(A[-1],A[-2])))
-	median = sorted(A)[(len(A)-1)/2]
-	peaks = filter(lambda x:A[x[0]]>median,peaks)
-	peaks = sorted(peaks,key=lambda x:x[1],reverse=True)
-	return [x[0] for x in peaks[:limit]]
-
 def findDeviations(A,limit):
 	l = 10
 	r = 1.5
@@ -126,70 +109,11 @@ def PCD_xycluster(phash,box,points,resolution):
 	clusters = sorted(clusters,key=lambda x:len(x),reverse=True)
 	return clusters
 
-def houghTransform(points):
-	angle_bins = 20
-	resolution = 0.5
-	numLines = 5
-	angle_inc = numpy.pi / angle_bins
-	count = {}
-	endpt_low = {}
-	endpt_high = {}
-	norm_points = numpy.array(points)
-	mx = numpy.mean(norm_points[:,0])
-	my = numpy.mean(norm_points[:,1])
-	norm_points -= [mx,my,0]
-	print len(norm_points)
-	for p in norm_points:
-		theta = 0
-		for a in range(angle_bins):
-			r = abs(p[0]*numpy.cos(theta) + p[1]*numpy.sin(theta))
-			endpt = numpy.linalg.norm([p[0]-r*numpy.cos(theta),p[1]-r*numpy.sin(theta)])
-			if p[0] < r*numpy.cos(theta) or p[0]==r*numpy.cos(theta) and p[1]<r*numpy.sin(theta):
-				endpt = -endpt
-			r = int(r / resolution)
-			if (r,a) in count:
-				count[(r,a)] += 1
-				endpt_low[(r,a)] = min(endpt_low[(r,a)],endpt)
-				endpt_high[(r,a)] = max(endpt_high[(r,a)],endpt)
-			else:
-				count[(r,a)] = 1
-				endpt_low[(r,a)] = endpt
-				endpt_high[(r,a)] = endpt
-			theta += angle_inc
-	for i in sorted(count.keys(),key=lambda x:count[x]):
-		print i,count[i]
-	plt.hist(count.values())
-	plt.show()
-	distr = sorted(count.values())
-	threshold = distr[-numLines]
-	lines = []
-	print mx,my
-	for c in count:
-		if count[c] < threshold:
-			continue
-		r = c[0] * resolution
-		theta = angle_inc * c[1]
-		xk = r * numpy.cos(theta) + mx
-		yk = r * numpy.sin(theta) + my
-		dx = numpy.sin(theta)
-		dy = -numpy.cos(theta)
-		if dx < 0 or dx==0 and dy<0:
-			dx = -dx
-			dy = -dy
-		x1 = xk + dx * endpt_low[c]
-		y1 = yk + dy * endpt_low[c]
-		x2 = xk + dx * endpt_high[c]
-		y2 = yk + dy * endpt_high[c]
-		lines.append((x1,x2,y1,y2))
-		print r,theta,endpt_low[c],endpt_high[c]
-	print 'Hough space has %d/%d elements (threshold %d)' % (len(lines),len(count),threshold)
-	return lines
-
 def getLines(points):
 	minX,minY,minZ = numpy.min(points,0)
 	maxX,maxY,maxZ = numpy.max(points,0)
-	grid = 50
-	threshold = 0.9
+	grid = 150
+	threshold = 0.5
 	dx = (maxX - minX) / grid
 	dy = (maxY - minY) / grid
 	resolution = min(dx,dy)
@@ -210,8 +134,10 @@ def getLines(points):
 			acc[i,j] = 0
 	dix = list(numpy.nonzero(sumX >= max(sumX)*threshold)[0])
 	diy = list(numpy.nonzero(sumY >= max(sumY)*threshold)[0])
-#	plt.imshow(acc.transpose() > 0)
-#	plt.show()
+	plt.imshow(mask.transpose(),cmap='Greys')
+	plt.figure()
+	plt.imshow(acc.transpose() > 0,cmap='Greys')
+	plt.show()
 	nh = 1
 	nv = 1
 	mapx = {diy[0]:0}
@@ -224,7 +150,6 @@ def getLines(points):
 		if dix[i] > dix[i-1] + 1:
 			nh += 1
 		mapy[dix[i]] = nh-1
-	print 'Found %d horizontal %d vertical' % (nh,nv)
 	horizontal = [[] for i in range(nh)]
 	vertical = [[] for i in range(nv)]
 	for p in points:
@@ -309,11 +234,7 @@ if 'level' in sys.argv[1]:
 		savePCD("%s/%d-cloud.pcd" % (sys.argv[2],b),v[i])
 		saveOBJ("%s/beam%d.obj" % (sys.argv[2],b), bounds)
 		b += 1
-#	lines = houghTransform(target)
-#	for l in lines:
-#		print l
-#		plt.plot([l[0],l[1]],[l[2],l[3]],'k')
-#	plt.show()
+	print 'Found %d horizontal %d vertical' % (len(h),len(v))
 elif 'storey' in sys.argv[1]:
 	target = loadPCD(sys.argv[1])
 	r = 0.2
@@ -324,7 +245,7 @@ elif 'storey' in sys.argv[1]:
 	for i in range(min(len(clusters),20)):
 		savePCD("%s/%d-cloud.pcd" % (sys.argv[2],i), clusters[i])
 		bounds = PCD_getBounds(clusters[i],True)
-		if bounds[3]-bounds[0] < 5 and bounds[4]-bounds[1] < 5 and bounds[5]-bounds[2] > targetBounds[5]-targetBounds[2]-0.5:
+		if bounds[3]-bounds[0] < 3 and bounds[4]-bounds[1] < 3 and bounds[5]-bounds[2] > targetBounds[5]-targetBounds[2]-0.5:
 			saveOBJ("%s/column%d.obj" % (sys.argv[2],b), bounds)
 			b += 1
 	print 'Found %d columns' % b
@@ -346,29 +267,16 @@ else:
 		acc[idx,idy,idz] = 1
 
 	levels = numpy.sum(acc,(0,1))
-#	peaks = findpeaks(levels,5)
-	peaks = findDeviations(levels,2)
+	peaks = findDeviations(levels,6)
 	print 'Found levels',peaks
-	peakVal = [i for j in peaks for i in j]
-#	plt.plot(levels,'.')
-#	plt.plot(peakVal,levels[peakVal],'o')
+#	peakVal = [i for j in peaks for i in j]
+#	plt.plot(levels,'.',mew=1,markersize=10)
+#	plt.plot(peakVal,levels[peakVal],'x',mew=2,markersize=10)
+#	plt.xlabel('Z-coordinate bins')
+#	plt.ylabel('Point density')
 #	plt.show()
 
-#	for l in range(len(peaks)-1):
-#		im = numpy.sum(acc[:,:,peaks[l]+1:peaks[l+1]],2)
-#		low = numpy.min(im)
-#		high = numpy.max(im)
-#		mask = im > high - 5
-#		x,y = numpy.nonzero(mask)
-#		x,y = cluster(zip(x,y))
-#		plt.imshow(im)
-#		plt.scatter(y,x,marker='o',edgecolors='w',facecolors='none',s=50)
-#		plt.title('Storey %d (%d columns)' % (l,len(x)))
-#		plt.show()
-#		plt.imshow(acc[:,:,peaks[l+1]])
-#		plt.title('Level %d' % l)
-#		plt.show()
-
+	peaks = sorted(peaks,key=lambda x:x[0])
 	levels = [[] for l in range(len(peaks))]
 	storeys = [[] for l in range(len(peaks)-1)]
 	for p in points:
