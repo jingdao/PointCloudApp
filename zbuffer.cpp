@@ -7,9 +7,12 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/osmesa.h>
-#define NUM_CAMERAS 8
-#define RESOLUTION 1000
+#define NUM_CAMERAS 4
+#define RESOLUTION 400
+#define ZFAR 100000
 #define INCLUDE_TOP 1
+#define SAVE_IMAGES 1
+#define VERBOSE 0
 
 //http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-10-polygonal-objects/
 
@@ -59,6 +62,49 @@ void readPLY(char* filename, std::vector<Point> *vertices, std::vector<Triangle>
 	fclose(f);
 }
 
+void writeImageByIndex(char* filename,int width,int height,unsigned int* depth) {
+	unsigned int* p = depth;
+//	unsigned int minD=0xFFFFFFFF,maxD=0;
+	float minD=ZFAR,maxD=-1;
+	for (int i=0;i<height;i++) {
+		for (int j=0;j<width;j++) {
+			float buffer_z = (float) *p / 0xFFFFFFFF;
+			if (buffer_z > 0 && buffer_z < 1) {
+				float z = -1 / (buffer_z - 1 - buffer_z / ZFAR);
+				if (z < minD) minD = z;
+				if (z > maxD) maxD = z;
+			}
+			p++;
+		}
+	}
+	unsigned char* pixels = new unsigned char[width*height*3]();
+	unsigned char* q = pixels;
+	for (int i=0;i<height;i++) {
+		for (int j=0;j<width;j++) {
+			float buffer_z = (float) depth[(height-1-i)*width+j] / 0xFFFFFFFF;
+			if (buffer_z > 0 && buffer_z < 1) {
+				float z = -1 / (buffer_z - 1 - buffer_z / ZFAR);
+//				unsigned char c = ((float)d-minD)/(maxD-minD) * 255;
+//				unsigned char c = (z-minD)/(maxD-minD) * 255;
+				unsigned char c = (maxD-z)/(maxD-minD) * 255;
+				*q++ = c;
+				*q++ = c;
+				*q++ = c;
+			} else {
+				q += 3;
+			}
+		}
+	}
+	FILE* f = fopen(filename,"w");
+	fprintf(f,"P6\n%d %d\n255\n",width,height);
+	fwrite(pixels,1,width*height*3,f);
+	delete[] pixels;
+	fclose(f);
+#if VERBOSE
+	printf("Wrote %d pixels to %s\n",width*height,filename);
+#endif
+}
+
 void writeToPCD(char* filename,std::vector<Point> *pointcloud) {
 	FILE* f = fopen(filename, "w");
 	if (!f) {
@@ -80,7 +126,9 @@ void writeToPCD(char* filename,std::vector<Point> *pointcloud) {
 		fprintf(f,"%f %f %f\n",(*pointcloud)[i].x,(*pointcloud)[i].y,(*pointcloud)[i].z);
 	}
 	fclose(f);
+#if VERBOSE
 	printf("Wrote %lu points to %s\n",pointcloud->size(),filename);
+#endif
 }
 
 int main(int argc, char* argv[]) {
@@ -109,7 +157,9 @@ int main(int argc, char* argv[]) {
 		if (vertices[i].z < minZ) minZ = vertices[i].z;
 		else if (vertices[i].z > maxZ) maxZ = vertices[i].z;
 	}
+#if VERBOSE
 	printf("Bounding box: x:(%.2f %.2f) y:(%.2f %.2f) z:(%.2f %.2f)\n",minX,maxX,minY,maxY,minZ,maxZ);
+#endif
 	Point centroid = {
 		(minX + maxX) / 2,
 		(minY + maxY) / 2,
@@ -139,8 +189,7 @@ int main(int argc, char* argv[]) {
 	glLoadIdentity();
 	float fov = 70;
 	float fov_scale = 2 * tan(fov / 2 / 180 * M_PI);
-	float zfar = 100000;
-	gluPerspective(fov,1,1,zfar);
+	gluPerspective(fov,1,1,ZFAR);
 	glViewport(0, 0, width, height);
 	float cameraX = maxX - minX;
 	float cameraY = maxY - minY;
@@ -152,12 +201,14 @@ int main(int argc, char* argv[]) {
 	float theta = atan2(cameraY, cameraX);
 	int depthBits=0;
 	glGetIntegerv(GL_DEPTH_BITS, &depthBits);
+#if VERBOSE
 	printf("depth buffer bits %d\n",depthBits);
+#endif
 
 	int numViews = INCLUDE_TOP ? NUM_CAMERAS + 2 : NUM_CAMERAS;
 	for (int k = 0; k < numViews; k++) {
-//		if (!merge)
-//			pointcloud.clear();
+		if (!merge)
+			pointcloud.clear();
 		float rx = rho * cos(theta);
 		float ry = rho * sin(theta);
 		theta += 2 * 3.14159265 / NUM_CAMERAS;
@@ -193,7 +244,7 @@ int main(int argc, char* argv[]) {
 				float buffer_z = (float) depth[j * width + i] / 0xFFFFFFFF;
 				if (buffer_z > 0 && buffer_z < 1) {
 //					float z = -1 / (1 - buffer_z);
-					float z = 1 / (buffer_z - 1 - buffer_z / zfar);
+					float z = 1 / (buffer_z - 1 - buffer_z / ZFAR);
 					float x = (i - cx) * -z / width * fov_scale;
 					float y = (j - cy) * -z / height * fov_scale;
 					x -= R[12];
@@ -216,6 +267,10 @@ int main(int argc, char* argv[]) {
 				FILE* f = fopen(buffer,"r");
 				if (!f) {
 					writeToPCD(buffer,&pointcloud);
+#if SAVE_IMAGES
+					sprintf(buffer,"%s/%d.ppm",argv[2],n);
+					writeImageByIndex(buffer,width,height,depth);
+#endif
 					break;
 				}
 				fclose(f);
