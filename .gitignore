@@ -102,6 +102,8 @@ cloud/*
 !cloud/extractElement.py
 !cloud/extractPrimitive.py
 !cloud/registerpcd.py
+!cloud/obj2ply.py
+!cloud/uniform_sample.py
 !obstruction
 obstruction/*
 !obstruction/process_bounding_box.py
