@@ -30,7 +30,7 @@ def writePCD(filename,subset):
 	f.close()
 	print 'Wrote '+str(len(subset))+' points to '+filename
 
-density=0.001
+density=0.01
 numVertex=0
 numFace=0
 vertices=[]
@@ -62,7 +62,9 @@ for i in range(numFace):
 	area=triangleArea(p1,p2,p3)
 	numSamples = area/density
 	r = numSamples - int(numSamples)
-	numSamples = int(numSamples) + 1 if numpy.random.random() < r else 0
+	numSamples = int(numSamples)
+	if numpy.random.random() < r:
+		numSamples += 1
 	for n in range(numSamples):
 		a=numpy.random.random()
 		b=numpy.random.random()

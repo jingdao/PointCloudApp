@@ -98,6 +98,9 @@ viz_building: viz_building.cpp
 thermal_seg: thermal_seg.cpp
 	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU -lfreetype -I/usr/include/freetype2
 
+lbp3d: lbp3d.cpp
+	$(CXX) -ggdb3 -o $@ -I$(DEMO_DIR) $(DEMO_DIR)/ISARC_demo.cpp $< -lGL -lGLU
+
 debug: main
 
 single: all
