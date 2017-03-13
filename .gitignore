@@ -32,6 +32,7 @@
 !viz_building.cpp
 !thermal_seg.cpp
 !lbp3d.cpp
+!renderPLY.cpp
 !plyheader
 !kitti
 kitti/*

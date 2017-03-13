@@ -101,6 +101,9 @@ thermal_seg: thermal_seg.cpp
 lbp3d: lbp3d.cpp
 	$(CXX) -ggdb3 -o $@ -I$(DEMO_DIR) $(DEMO_DIR)/ISARC_demo.cpp $< -lGL -lGLU
 
+renderPLY: renderPLY.cpp
+	$(CXX) -ggdb3 -o $@ $< -lSDL -lGL -lGLU
+
 debug: main
 
 single: all

@@ -7,6 +7,7 @@
 #include "hpcd.h"
 #define CLOUD_LEAF_SIZE 0.1
 #define FEATURE_SIZE 64
+#define CORR_THRESHOLD 0.8
 
 void normalize(float* f, int k) {
 	float s = 0;
@@ -37,6 +38,10 @@ void lbpHist(HPCD* cloud, float* feature) {
 void readPoints(char* filename,std::vector<Point> *points) {
 	bool header = true;
 	FILE* f = fopen(filename,"r");
+	if (!f) {
+		printf("Cannot read from file: %s\n", filename);
+		return;
+	}
 	char buf[256];
 	while (fgets(buf, 256, f)) {
 		if (header) {
@@ -96,6 +101,24 @@ void saveDetections(char* filename,HPCD* scene,HPCD* model,std::vector<Point> *m
 		}
 	}
 	HPCD_writePoints(filename,&output);
+}
+
+void saveDetectionsToFolder(char* foldername,HPCD* scene,HPCD* model,std::vector<Point> *modelPoints,std::vector<Point> *detection) {
+	char filename[128];
+	for (size_t j=0;j<detection->size();j++) {
+		std::vector<Point> output;
+		sprintf(filename,"%s/%lu-cloud.pcd",foldername,j);
+		for (size_t i=0;i<modelPoints->size();i++) {
+			Point h = modelPoints->at(i);
+			Point p = {
+				scene->minX + detection->at(j).x * scene->leafSize + h.x - model->minX,
+				scene->minY + detection->at(j).y * scene->leafSize + h.y - model->minY,
+				scene->minZ + detection->at(j).z * scene->leafSize + h.z - model->minZ,
+				0,0,0};
+			output.push_back(p);
+		}
+		HPCD_writePoints(filename,&output);
+	}
 }
 
 void meanShift(std::vector<Point> *points,std::vector<Point> *mu,float R) {
@@ -228,7 +251,7 @@ void windowCorrelation(HPCD* scene,HPCD* model, std::vector<Point> *detection) {
 					count++;
 			}
 			float score = 1.0 * count / model->numPoints;
-			if (score > 0.8) {
+			if (score > CORR_THRESHOLD) {
 //				Point p = {h->x,h->y,h->z,0,0,0};
 //				candidates.push_back(p);
 				candidates.push_back(i);
@@ -244,7 +267,8 @@ void windowCorrelation(HPCD* scene,HPCD* model, std::vector<Point> *detection) {
 int main(int argc,char* argv[]) {
 	if (argc < 4) {
 //		printf("Usage: %s in.pcd out.lbp3d\n",argv[0]);
-		printf("Usage: %s scene.pcd model.pcd detection.pcd\n",argv[0]);
+//		printf("Usage: %s scene.pcd model.pcd detection.pcd\n",argv[0]);
+		printf("Usage: %s scene.pcd model.pcd detection/\n",argv[0]);
 		return 1;
 	}
 	
@@ -265,7 +289,8 @@ int main(int argc,char* argv[]) {
 //	printf("%d %d\n",scene->numPoints,model->numPoints);
 	std::vector<Point> detection;
 	windowCorrelation(scene,model,&detection);
-	saveDetections(argv[3],scene,model,&modelPoints,&detection);
+//	saveDetections(argv[3],scene,model,&modelPoints,&detection);
+	saveDetectionsToFolder(argv[3],scene,model,&modelPoints,&detection);
 	HPCD_delete(scene);
 	HPCD_delete(model);
 }
