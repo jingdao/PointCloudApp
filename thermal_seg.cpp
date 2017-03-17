@@ -12,7 +12,7 @@
 #define BASE_HASH_CONSTANT 0.618033988
 #define STEP_HASH_CONSTANT 0.707106781
 #define STRING_HASH_CONSTANT 5381
-#define USE_THERMAL 0
+#define USE_THERMAL 1
 #define DISPLAY_LABEL 1
 
 struct HPoint {
@@ -679,8 +679,10 @@ void getPCA(std::vector<Point> *cloud, std::vector<float> *box) {
 	};
 //	printf("%f %f %f %f\n",f.length,f.width,f.height,f.elevation);
 	int classMember=0;
-	if (f.length > 0.3 && f.length < 2 && f.width > 0.3 && f.height > 0.5 && f.elevation < 0.5)
+	if (f.length > 0.21 && f.length < 2.36 && f.width > 0.14 && f.width < 1.34 && f.height > 0.73 && f.height < 3.03 && f.elevation < 0.5)
 		classMember=1;
+//	if (f.length > 0.3 && f.length < 2 && f.width > 0.3 && f.height > 0.5 && f.elevation < 0.5)
+//		classMember=1;
 	else if (f.length > 1 && f.length < 5 && f.height > 0.5 && f.elevation < 1.5)
 		classMember=2;
 	else if (f.length < 0.4 && f.width < 0.3 && f.elevation > 0.7)

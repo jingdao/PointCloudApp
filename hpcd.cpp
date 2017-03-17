@@ -809,10 +809,13 @@ void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<float> *float_data
 			outliers.push_back(z);
 		}
 	}
+	int clustersSaved = 0;
 	for (int i=0;i<numClusters;i++) {
 		size_t clusterSize = clusters[i].size() / 3;
 		if (clusterSize == 0)
 			break;
+		else
+			clustersSaved++;
 		sprintf(buffer,"%s/%d-cloud.pcd",outDir,i);
 		FILE* f = fopen(buffer, "w");
 		if (!f) {
@@ -856,7 +859,7 @@ void HPCD_writeClusters(char* outDir,HPCD* cloud, std::vector<float> *float_data
 		fprintf(f,"%f %f %f\n",outliers[i*3],outliers[i*3+1],outliers[i*3+2]);
 	fclose(f);
 	delete[] clusters;
-	printf("Saved %d point clouds to %s\n",numClusters,outDir);
+	printf("Saved %d point clouds to %s\n",clustersSaved,outDir);
 }
 
 HPCD* HPCD_combine(std::vector<HPCD*> *region) {
@@ -1589,9 +1592,9 @@ int main(int argc,char* argv[]) {
 	std::vector<std::vector<int> > indices;
 	euclideanLeafClustering(cloud,&indices,cloud->numPoints/1000,cloud->numPoints/2,200);
 #else
-	int numClusters = 200;
-//	euclideanClustering(cloud,numClusters);
-	euclideanClusteringXY(cloud,numClusters);
+	int numClusters = 50;
+	euclideanClustering(cloud,numClusters);
+//	euclideanClusteringXY(cloud,numClusters);
 //	colorClustering(cloud,numClusters);
 #endif
 #if PROFILE
