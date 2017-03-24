@@ -106,6 +106,8 @@ cloud/*
 !cloud/registerpcd.py
 !cloud/obj2ply.py
 !cloud/uniform_sample.py
+!cloud/region_proposal
+!cloud/region_proposal/*
 !obstruction
 obstruction/*
 !obstruction/process_bounding_box.py
