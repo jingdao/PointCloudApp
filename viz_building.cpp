@@ -252,14 +252,21 @@ void draw() {
 	glPointSize(1.0);
 	glBegin(GL_POINTS);
 	for (int i=0;i<cloud.size();i++) {
-		glColor3ub(255,0,0);
+//		glColor3ub(255,0,0);
+		glColor3ub(50,50,50);
 		for (int n = 0; n < cloud[i]->numPoints; n++){
 			glVertex3d(cloud[i]->float_data[n*4],cloud[i]->float_data[n*4+1],cloud[i]->float_data[n*4+2]);
 		}
 	}
 	glColor3ub(50,50,50);
-	for (int n=0;n<building->numPoints;n++)
+	for (int n=0;n<building->numPoints;n++) {
+		int c = building->float_data[n*4+3];
+		unsigned char b = c & 0xFF;
+		unsigned char g = (c >> 8) & 0xFF;
+		unsigned char r = (c >> 16) & 0xFF;
+		glColor3ub(r,g,b);
 		glVertex3d(building->float_data[n*4],building->float_data[n*4+1],building->float_data[n*4+2]);
+	}
 	glEnd();
 
 	glLineWidth(1.0);

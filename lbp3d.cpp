@@ -7,7 +7,10 @@
 #include "hpcd.h"
 #define CLOUD_LEAF_SIZE 0.1
 #define FEATURE_SIZE 64
-#define CORR_THRESHOLD 0.8
+
+float maxScore = 0;
+float corr_threshold = 0.8;
+float merge_threshold = 0.5;
 
 void normalize(float* f, int k) {
 	float s = 0;
@@ -130,48 +133,51 @@ void meanShift(std::vector<Point> *points,std::vector<Point> *mu,float R) {
 			n++;
 		if (n >= points->size())
 			break;
-		int cx = points->at(n).x;
-		int cy = points->at(n).y;
-		int cz = points->at(n).z;
 
-		while (true) {
-			int count = 0;
-			float mx = 0;
-			float my = 0;
-			float mz = 0;
-//			std::vector<int> neighbors;
+		Point seed = points->at(n);
+		std::vector<Point> Q;
+		std::vector<Point> S;
+		Q.push_back(seed);
+		visited[n] = true;
+
+		while (Q.size() > 0) {
+			Point p = Q[Q.size() - 1];
+			Q.pop_back();
+			S.push_back(p);
 			for (size_t i=0;i<points->size();i++) {
-				float dist = 0;
-				dist += (points->at(i).x - cx) * (points->at(i).x - cx);
-				dist += (points->at(i).y - cy) * (points->at(i).y - cy);
-				dist += (points->at(i).z - cz) * (points->at(i).z - cz);
-				if (dist < R * R) {
-//					neighbors.push_back(i);
-					visited[i] = true;
-					count++;
-					mx += points->at(i).x;
-					my += points->at(i).y;
-					mz += points->at(i).z;
+				if (!visited[i]) {
+					float dist = 0;
+					dist += (points->at(i).x - p.x) * (points->at(i).x - p.x);
+					dist += (points->at(i).y - p.y) * (points->at(i).y - p.y);
+					dist += (points->at(i).z - p.z) * (points->at(i).z - p.z);
+					if (dist < R * R) {
+						Q.push_back(points->at(i));
+						visited[i] = true;
+					}
 				}
-			}
-			mx /= count;
-			my /= count;
-			mz /= count;
-			if ((int)mx == cx && (int)my == cy && (int)mz == cz) {
-//				for (size_t j=0;j<neighbors.size();j++)
-//					visited[neighbors[j]] = true;
-				Point c = { mx,my,mz,0,0,0};
-				mu->push_back(c);
-				break;
-			} else {
-				cx = (int)mx;
-				cy = (int)my;
-				cz = (int)mz;
 			}
 		}
 
+		if (S.size() < 3)
+			continue;
+		Point c = {0,0,0,0,0,0};
+		for (size_t i=0;i<S.size();i++) {
+			c.x += S[i].x;
+			c.y += S[i].y;
+			c.z += S[i].z;
+		}
+		c.x /= S.size();
+		c.y /= S.size();
+		c.z /= S.size();
+		mu->push_back(c);
 	}
 	printf("mean shift: before %lu after %lu\n",points->size(),mu->size());
+//	for (size_t i=0;i<points->size();i++) {
+//		printf("before %f %f %f\n",points->at(i).x,points->at(i).y,points->at(i).z);
+//	}
+//	for (size_t i=0;i<mu->size();i++) {
+//		printf("after %f %f %f\n",mu->at(i).x,mu->at(i).y,mu->at(i).z);
+//	}
 	delete[] visited;
 }
 
@@ -224,14 +230,14 @@ void anms(HPCD* scene,std::vector<int> *candidates,std::vector<Point> *mu, int c
 		centroid.z /= count;
 		mu->push_back(centroid);
 	}
-	printf("anms: before %lu after %lu\n",candidates->size(),mu->size());
+	printf("anms: before %lu after %lu (max score %f)\n",candidates->size(),mu->size(),maxScore);
 }
 
 void windowCorrelation(HPCD* scene,HPCD* model, std::vector<Point> *detection) {
 	std::vector<int> offsetX;
 	std::vector<int> offsetY;
 	std::vector<int> offsetZ;
-//	std::vector<Point> candidates;
+	std::vector<Point> candidate_points;
 	std::vector<int> candidates;
 	for (int i=0;i<model->maxSize;i++) {
 		HPoint* h = model->data[i];
@@ -251,9 +257,11 @@ void windowCorrelation(HPCD* scene,HPCD* model, std::vector<Point> *detection) {
 					count++;
 			}
 			float score = 1.0 * count / model->numPoints;
-			if (score > CORR_THRESHOLD) {
-//				Point p = {h->x,h->y,h->z,0,0,0};
-//				candidates.push_back(p);
+			if (score > maxScore)
+				maxScore = score;
+			if (score > corr_threshold) {
+				Point p = {h->x,h->y,h->z,0,0,0};
+				candidate_points.push_back(p);
 				candidates.push_back(i);
 				h->label=1;
 //				printf("%f %d %d %d\n",score,h->x,h->y,h->z);
@@ -261,19 +269,26 @@ void windowCorrelation(HPCD* scene,HPCD* model, std::vector<Point> *detection) {
 		}
 	}
 	//non-maximal suppression
-	anms(scene,&candidates,detection,2);
+	meanShift(&candidate_points,detection,merge_threshold / CLOUD_LEAF_SIZE);
+//	anms(scene,&candidates,detection,3);
 }
 
 int main(int argc,char* argv[]) {
 	if (argc < 4) {
 //		printf("Usage: %s in.pcd out.lbp3d\n",argv[0]);
 //		printf("Usage: %s scene.pcd model.pcd detection.pcd\n",argv[0]);
-		printf("Usage: %s scene.pcd model.pcd detection/\n",argv[0]);
+		printf("Usage: %s scene.pcd model.pcd detection [-c corr_threshold -m merge_threshold/\n",argv[0]);
 		return 1;
 	}
 	
 	char* sceneFile = argv[1];
 	char* modelFile = argv[2];
+	for (int i=4;i<argc;i++) {
+		if (strcmp(argv[i],"-c")==0 && i+1<argc)
+			corr_threshold = atof(argv[++i]);
+		else if (strcmp(argv[i],"-m")==0 && i+1<argc)
+			merge_threshold = atof(argv[++i]);
+	}
 
 //	HPCD* cloud = HPCD_Init(inFile,CLOUD_LEAF_SIZE);
 //	float* feature = new float[FEATURE_SIZE]();
