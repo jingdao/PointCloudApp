@@ -13,6 +13,7 @@
 #define ZFAR 100000
 #define VERBOSE 0
 #define NUM_COLORS 5
+#define NUM_TEXTURE 10
 
 struct Point {
 	double x,y,z;
@@ -26,6 +27,10 @@ struct Triangle {
 struct Color {
 	unsigned char r,g,b;
 };
+struct Image {
+	int width,height;
+	unsigned char* data;
+};
 
 double cameraX=20,cameraY=20,cameraZ=10;
 double centerX=0,centerY=0,centerZ=0;
@@ -35,6 +40,7 @@ int previousX,previousY;
 double scrollSpeed = 1.1;
 std::vector<Point> vertices;
 std::vector<Triangle> faces;
+std::vector<Vector> normals;
 std::vector<Color> shading;
 bool save_images;
 Color previousColor;
@@ -46,6 +52,33 @@ Color palette[] = {
 	{10,255,10}, //green
 	{10,10,255}, //blue
 };
+
+bool loadPPM(char* name,Image *image) {
+	char buffer[128];
+	FILE* pgm = fopen(name,"r");
+	if (!pgm) {
+		printf("%s not found\n",name);
+		return false;
+	}
+	fgets(buffer,128,pgm); //P5 or P6
+	do {
+		fgets(buffer,128,pgm);
+	} while (buffer[0]=='#'); //remove comments
+	char *c = buffer;
+	image->width = strtol(c,&c,10);
+	image->height = strtol(c,&c,10);
+	fgets(buffer,128,pgm); //255
+	if (image->data)
+		delete[] image->data;
+	image->data = new unsigned char[image->width*image->height*3];
+	fread(image->data,1,image->width*image->height*3,pgm);
+	//		for (int i=image->width*image->height;i>=0;i--) {
+	//			unsigned char tmp = image->data[i*3+2];
+	//			image->data[i*3+2] = image->data[i*3];
+	//			image->data[i*3] = tmp;
+	//		}
+	return true;
+}
 
 void readPLY(char* filename, std::vector<Point> *vertices, std::vector<Triangle> *faces) {
 	FILE* f = fopen(filename, "r");
@@ -133,6 +166,7 @@ void getShading(Color objectColor, Vector lightDir) {
 				strength * lightColor.b * objectColor.b / 255,
 			};
 			shading.push_back(c);
+			normals.push_back(n);
 		}
 	} else {
 		for (size_t i=0;i<faces.size();i++) {
@@ -161,7 +195,7 @@ void writeImage(char* filename) {
 	fclose(f);
 }
 
-void draw() {
+void drawNoTexture() {
 	glPushAttrib(GL_ALL_ATTRIB_BITS);
 	glPushMatrix();
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -193,6 +227,38 @@ void draw() {
 		Point p3 = vertices[faces[i].id3];
 		glVertex3f(p1.x, p1.y, p1.z);
 		glVertex3f(p2.x, p2.y, p2.z);
+		glVertex3f(p3.x, p3.y, p3.z);
+	}
+	glEnd();
+
+	glFlush();
+	if (!save_images)
+		SDL_GL_SwapBuffers();
+	glPopMatrix();
+	glPopAttrib();
+}
+
+void drawTexture() {
+	glPushAttrib(GL_ALL_ATTRIB_BITS);
+	glPushMatrix();
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(cameraX,cameraY,cameraZ,centerX,centerY,centerZ,upX,upY,upZ);
+
+	glBegin(GL_TRIANGLES);
+	for (size_t i = 0; i < faces.size(); i++) {
+		Point p1 = vertices[faces[i].id1];
+		Point p2 = vertices[faces[i].id2];
+		Point p3 = vertices[faces[i].id3];
+		glTexCoord2d(0.0,0.0);
+		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+		glVertex3f(p1.x, p1.y, p1.z);
+		glTexCoord2d(1.0,0.0);
+		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+		glVertex3f(p2.x, p2.y, p2.z);
+		glTexCoord2d(0.5,1.0);
+		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
 		glVertex3f(p3.x, p3.y, p3.z);
 	}
 	glEnd();
@@ -245,7 +311,13 @@ int main(int argc, char* argv[]) {
 	SDL_WM_SetCaption("Render PLY", NULL);
 	SDL_SetVideoMode(RESOLUTION,RESOLUTION, 32, SDL_OPENGL);
     glEnable(GL_DEPTH_TEST);
+#if NUM_TEXTURE
+	glEnable( GL_TEXTURE_2D );
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+#else
 	glDisable(GL_LIGHTING);
+#endif
 	glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT, GL_FILL);
 	glMatrixMode(GL_PROJECTION);
@@ -254,6 +326,22 @@ int main(int argc, char* argv[]) {
 	cameraX = maxX - minX;
 	cameraY = maxY - minY;
 	cameraZ = maxZ - minZ;
+
+	void (*draw)(void);
+#if NUM_TEXTURE
+	GLuint texture[NUM_TEXTURE];
+	glGenTextures( NUM_TEXTURE, texture );
+	Image img = {0,0,NULL};
+	for (int i=0;i<NUM_TEXTURE;i++) {
+		sprintf(buffer,"textures/%d.ppm",i);
+		loadPPM(buffer,&img);
+		glBindTexture( GL_TEXTURE_2D, texture[i] );
+		gluBuild2DMipmaps( GL_TEXTURE_2D, 3, img.width, img.height, GL_RGB, GL_UNSIGNED_BYTE, img.data );
+	}
+	draw = drawTexture;
+#else
+	draw = drawNoTexture;
+#endif
 
 	if (save_images) {
 		sprintf(buffer,"%s/labels.txt",argv[2]);
@@ -277,6 +365,10 @@ int main(int argc, char* argv[]) {
 			Vector lightDir = {0,0,1};
 			getShading(objectColor,lightDir);
 			glClearColor(1.0/255*bgColor.r,1.0/255*bgColor.g,1.0/255*bgColor.b,1);
+#if NUM_TEXTURE
+			int t = rand() % NUM_TEXTURE;
+			glBindTexture(GL_TEXTURE_2D,texture[t]);
+#endif
 
 			cameraX = rho * cos(theta);
 			cameraY = rho * sin(theta);
@@ -293,7 +385,11 @@ int main(int argc, char* argv[]) {
 				fclose(f);
 				n++;
 			}
+#if NUM_TEXTURE
+			fprintf(factorFile,"%d %d %d %d\n",classLabel,k,t,c2);
+#else
 			fprintf(factorFile,"%d %d %d %d\n",classLabel,k,c1,c2);
+#endif
 		}
 		fclose(factorFile);
 	} else {

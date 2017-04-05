@@ -34,6 +34,7 @@
 !lbp3d.cpp
 !renderPLY.cpp
 !plyheader
+!kdtree_match.py
 !kitti
 kitti/*
 !kitti/pipeline.sh
@@ -58,6 +59,7 @@ kitti/*
 !kitti/pad_pipeline.sh
 !kitti/igm.py
 !kitti/computation.sh
+!kitti/review_pipeline.sh
 !tools
 tools/*
 !tools/esf.cpp
