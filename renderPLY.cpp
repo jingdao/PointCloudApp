@@ -12,7 +12,7 @@
 #define RESOLUTION 800
 #define ZFAR 100000
 #define VERBOSE 0
-#define NUM_COLORS 5
+#define NUM_COLORS 10
 #define NUM_TEXTURE 10
 
 struct Point {
@@ -51,6 +51,11 @@ Color palette[] = {
 	{255,10,10}, //red
 	{10,255,10}, //green
 	{10,10,255}, //blue
+	{255,255,10}, //yellow
+	{255,10,255}, //purple
+	{10,255,255}, //cyan
+	{255,128,10}, //orange
+	{128,10,255}, //violet
 };
 
 bool loadPPM(char* name,Image *image) {
@@ -118,7 +123,7 @@ void readPLY(char* filename, std::vector<Point> *vertices, std::vector<Triangle>
 	fclose(f);
 }
 
-Vector getTriangleNormal(Point p1, Point p2, Point p3) { //away from origin
+Vector getTriangleNormal(Point p1, Point p2, Point p3, bool normalize) {
 	Point centroid = {
 		(p1.x + p2.x + p3.x) / 3,
 		(p1.y + p2.y + p3.y) / 3,
@@ -131,15 +136,17 @@ Vector getTriangleNormal(Point p1, Point p2, Point p3) { //away from origin
 		v1.z*v2.x - v1.x*v2.z,
 		v1.x*v2.y - v1.y*v2.x
 	};
-	double magn = sqrt(n.x*n.x + n.y*n.y + n.z*n.z);
-	n.x /= magn;
-	n.y /= magn;
-	n.z /= magn;
-	double dotProduct = centroid.x * n.x + centroid.y * n.y + centroid.z * n.z;
+	double dotProduct = (cameraX-centroid.x) * n.x + (cameraY-centroid.y) * n.y + (cameraZ-centroid.z) * n.z;
 	if (dotProduct < 0) {
 		n.x = -n.x;
 		n.y = -n.y;
 		n.z = -n.z;
+	}
+	if (normalize) {
+		double magn = sqrt(n.x*n.x + n.y*n.y + n.z*n.z);
+		n.x /= magn;
+		n.y /= magn;
+		n.z /= magn;
 	}
 	return n;
 }
@@ -153,7 +160,7 @@ void getShading(Color objectColor, Vector lightDir) {
 			Point p1 = vertices[faces[i].id1];
 			Point p2 = vertices[faces[i].id2];
 			Point p3 = vertices[faces[i].id3];
-			Vector n = getTriangleNormal(p1,p2,p3);
+			Vector n = getTriangleNormal(p1,p2,p3,true);
 			double diffuseStrength = lightDir.x*n.x + lightDir.y*n.y + lightDir.z*n.z;
 			if (diffuseStrength < 0)
 				diffuseStrength = 0;
@@ -176,6 +183,34 @@ void getShading(Color objectColor, Vector lightDir) {
 		}
 	}
 	previousColor = objectColor;
+}
+
+void getNormals() {
+	normals.clear();
+	normals.resize(vertices.size());
+	for (size_t i=0;i<faces.size();i++) {
+		Point p1 = vertices[faces[i].id1];
+		Point p2 = vertices[faces[i].id2];
+		Point p3 = vertices[faces[i].id3];
+		Vector n = getTriangleNormal(p1,p2,p3,false);
+		normals[faces[i].id1].x += n.x;
+		normals[faces[i].id1].y += n.y;
+		normals[faces[i].id1].z += n.z;
+		normals[faces[i].id2].x += n.x;
+		normals[faces[i].id2].y += n.y;
+		normals[faces[i].id2].z += n.z;
+		normals[faces[i].id3].x += n.x;
+		normals[faces[i].id3].y += n.y;
+		normals[faces[i].id3].z += n.z;
+	}
+	for (size_t i=0;i<normals.size();i++) {
+		Vector n = normals[i];
+		double magn = sqrt(n.x*n.x + n.y*n.y + n.z*n.z);
+		n.x /= magn;
+		n.y /= magn;
+		n.z /= magn;
+		normals[i] = n;
+	}
 }
 
 void writeImage(char* filename) {
@@ -251,14 +286,23 @@ void drawTexture() {
 		Point p1 = vertices[faces[i].id1];
 		Point p2 = vertices[faces[i].id2];
 		Point p3 = vertices[faces[i].id3];
+//		glTexCoord2d(0.0,0.0);
+//		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+//		glVertex3f(p1.x, p1.y, p1.z);
+//		glTexCoord2d(1.0,0.0);
+//		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+//		glVertex3f(p2.x, p2.y, p2.z);
+//		glTexCoord2d(0.5,1.0);
+//		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+//		glVertex3f(p3.x, p3.y, p3.z);
 		glTexCoord2d(0.0,0.0);
-		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+		glNormal3f(normals[faces[i].id1].x,normals[faces[i].id1].y,normals[faces[i].id1].z);
 		glVertex3f(p1.x, p1.y, p1.z);
 		glTexCoord2d(1.0,0.0);
-		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+		glNormal3f(normals[faces[i].id2].x,normals[faces[i].id2].y,normals[faces[i].id2].z);
 		glVertex3f(p2.x, p2.y, p2.z);
 		glTexCoord2d(0.5,1.0);
-		glNormal3f(normals[i].x,normals[i].y,normals[i].z);
+		glNormal3f(normals[faces[i].id3].x,normals[faces[i].id3].y,normals[faces[i].id3].z);
 		glVertex3f(p3.x, p3.y, p3.z);
 	}
 	glEnd();
@@ -315,6 +359,8 @@ int main(int argc, char* argv[]) {
 	glEnable( GL_TEXTURE_2D );
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
+//	GLfloat ambient[4] = {0.5,0.5,0.5,1};
+//	glLightfv(GL_LIGHT0,GL_AMBIENT,ambient);
 #else
 	glDisable(GL_LIGHTING);
 #endif
@@ -356,6 +402,10 @@ int main(int argc, char* argv[]) {
 		float rho = sqrt(cameraX*cameraX + cameraY*cameraY);
 		float theta = atan2(cameraY, cameraX);
 		for (int k = 0; k < NUM_CAMERAS; k++) {
+			cameraX = rho * cos(theta);
+			cameraY = rho * sin(theta);
+			theta += 2 * 3.14159265 / NUM_CAMERAS;
+
 			int c1 = rand() % (NUM_COLORS-1)+1, c2;
 			do {
 				c2 = rand() % NUM_COLORS;
@@ -363,16 +413,14 @@ int main(int argc, char* argv[]) {
 			Color objectColor = palette[c1];
 			Color bgColor = palette[c2];
 			Vector lightDir = {0,0,1};
-			getShading(objectColor,lightDir);
+//			getShading(objectColor,lightDir);
+			getNormals();
 			glClearColor(1.0/255*bgColor.r,1.0/255*bgColor.g,1.0/255*bgColor.b,1);
 #if NUM_TEXTURE
 			int t = rand() % NUM_TEXTURE;
 			glBindTexture(GL_TEXTURE_2D,texture[t]);
 #endif
 
-			cameraX = rho * cos(theta);
-			cameraY = rho * sin(theta);
-			theta += 2 * 3.14159265 / NUM_CAMERAS;
 			draw();
 			int n=0;
 			while (true) {
@@ -396,7 +444,8 @@ int main(int argc, char* argv[]) {
 		Color objectColor = palette[1];
 		Color bgColor = palette[0];
 		Vector lightDir = {0,0,1};
-		getShading(objectColor,lightDir);
+//		getShading(objectColor,lightDir);
+		getNormals();
 		glClearColor(1.0/255*bgColor.r,1.0/255*bgColor.g,1.0/255*bgColor.b,1);
 
 		int interval = 10000;
