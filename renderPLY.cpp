@@ -8,12 +8,12 @@
 #include <SDL/SDL.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
-#define NUM_CAMERAS 8
+#define NUM_CAMERAS 24
 #define RESOLUTION 800
 #define ZFAR 100000
 #define VERBOSE 0
 #define NUM_COLORS 10
-#define NUM_TEXTURE 10
+#define NUM_TEXTURE 0
 
 struct Point {
 	double x,y,z;
@@ -45,17 +45,30 @@ std::vector<Color> shading;
 bool save_images;
 Color previousColor;
 
+//Color palette[] = {
+//	{10,10,10}, //black
+//	{255,255,255}, //white
+//	{255,10,10}, //red
+//	{10,255,10}, //green
+//	{10,10,255}, //blue
+//	{255,255,10}, //yellow
+//	{255,10,255}, //purple
+//	{10,255,255}, //cyan
+//	{255,128,10}, //orange
+//	{128,10,255}, //violet
+//};
+
 Color palette[] = {
-	{10,10,10}, //black
-	{255,255,255}, //white
-	{255,10,10}, //red
-	{10,255,10}, //green
-	{10,10,255}, //blue
-	{255,255,10}, //yellow
-	{255,10,255}, //purple
-	{10,255,255}, //cyan
-	{255,128,10}, //orange
-	{128,10,255}, //violet
+	{50,50,50},
+	{147, 147, 147},
+	{254,   9,   9},
+	{  9, 254,   9},
+	{  9,   9, 254},
+	{180, 180,   7},
+	{180,   7, 180},
+	{  7, 180, 180},
+	{227, 114,   8},
+	{114,   8, 227},
 };
 
 bool loadPPM(char* name,Image *image) {
@@ -369,9 +382,9 @@ int main(int argc, char* argv[]) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(70,1,1,ZFAR);
-	cameraX = maxX - minX;
-	cameraY = maxY - minY;
-	cameraZ = maxZ - minZ;
+	cameraX = (maxX - minX) * 2.0;
+	cameraY = (maxY - minY) * 2.0;
+	cameraZ = (maxZ - minZ) * 0.5;
 
 	void (*draw)(void);
 #if NUM_TEXTURE
@@ -400,11 +413,13 @@ int main(int argc, char* argv[]) {
 		FILE* factorFile = fopen(buffer,"a");
 
 		float rho = sqrt(cameraX*cameraX + cameraY*cameraY);
-		float theta = atan2(cameraY, cameraX);
+//		float theta = atan2(cameraY, cameraX);
+		float theta = 0;
 		for (int k = 0; k < NUM_CAMERAS; k++) {
 			cameraX = rho * cos(theta);
 			cameraY = rho * sin(theta);
-			theta += 2 * 3.14159265 / NUM_CAMERAS;
+//			theta += 2 * 3.14159265 / NUM_CAMERAS;
+			theta += 2 * 3.14159265 / 8;
 
 			int c1 = rand() % (NUM_COLORS-1)+1, c2;
 			do {
@@ -412,13 +427,15 @@ int main(int argc, char* argv[]) {
 			} while (c2 == c1);
 			Color objectColor = palette[c1];
 			Color bgColor = palette[c2];
+			int pose_id = k%4==0 ? 0 : (k-2)%4==0 ? 1 : 2;
 			Vector lightDir = {0,0,1};
-//			getShading(objectColor,lightDir);
-			getNormals();
 			glClearColor(1.0/255*bgColor.r,1.0/255*bgColor.g,1.0/255*bgColor.b,1);
 #if NUM_TEXTURE
 			int t = rand() % NUM_TEXTURE;
 			glBindTexture(GL_TEXTURE_2D,texture[t]);
+			getNormals();
+#else
+			getShading(objectColor,lightDir);
 #endif
 
 			draw();
@@ -434,18 +451,23 @@ int main(int argc, char* argv[]) {
 				n++;
 			}
 #if NUM_TEXTURE
-			fprintf(factorFile,"%d %d %d %d\n",classLabel,k,t,c2);
+			fprintf(factorFile,"%d %d %d %d\n",classLabel,pose_id,t,c2);
 #else
-			fprintf(factorFile,"%d %d %d %d\n",classLabel,k,c1,c2);
+			fprintf(factorFile,"%d %d %d %d\n",classLabel,pose_id,c1,c2);
 #endif
+			if (k%8==7)
+				cameraZ *= 2.0;
 		}
 		fclose(factorFile);
 	} else {
 		Color objectColor = palette[1];
 		Color bgColor = palette[0];
 		Vector lightDir = {0,0,1};
-//		getShading(objectColor,lightDir);
+#if NUM_TEXTURE
 		getNormals();
+#else
+		getShading(objectColor,lightDir);
+#endif
 		glClearColor(1.0/255*bgColor.r,1.0/255*bgColor.g,1.0/255*bgColor.b,1);
 
 		int interval = 10000;
