@@ -11,8 +11,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #define IGNORE_ZEROS 1
-#define INCLUDE_OUTLIERS 1
-#define SHOW_PERCENTAGE 0
+#define INCLUDE_OUTLIERS 0
+#define SHOW_PERCENTAGE 1
 
 //double cameraX=0,cameraY=-5,cameraZ=3;
 //double cameraX=245,cameraY=-223,cameraZ=201;
@@ -22,17 +22,21 @@ double upX=0,upY=0,upZ=1;
 #if SHOW_PERCENTAGE
 	const int labelWidth=180;
 #else 
-	const int labelWidth=80;
+	const int labelWidth=140;
 #endif
-const int labelHeight=30,fontpixels=20,grayLevel=50;
+const int labelHeight=40,fontpixels=30,grayLevel=50;
 int mouseIndex = 0;
 int previousX,previousY;
 double scrollSpeed = 1.01;
 unsigned char raster[labelWidth * labelHeight * 3];
 
+struct Color {
+	unsigned char r,g,b;
+};
 struct PCD {
 	int numPoints;
 	float* float_data;
+	Color* color_data;
 };
 enum PCD_data_storage {
 	ASCII,
@@ -75,7 +79,8 @@ PCD* NewPCD(const char* fileName) {
 	int pointsParsed = 0;
 	while (fgets(buf, 256, f)) {
 		if (sscanf(buf, "POINTS %d", &pcd->numPoints) == 1) {
-			pcd->float_data = (float*)malloc(4 * pcd->numPoints * sizeof(float));
+			pcd->float_data = (float*)calloc(4 * pcd->numPoints, sizeof(float));
+			pcd->color_data = (Color*)malloc(pcd->numPoints * sizeof(Color));
 		} else if (strncmp(buf,"DATA ascii",10)==0) {
 			data_storage = ASCII;
 		} else if (strncmp(buf,"DATA binary_compressed",23)==0) {
@@ -86,6 +91,12 @@ PCD* NewPCD(const char* fileName) {
 		else if (data_storage == ASCII) {
 			if (sscanf(buf, "%f %f %f %f", pcd->float_data+pointsParsed * 4, pcd->float_data+pointsParsed * 4 + 1,
 				pcd->float_data+pointsParsed * 4 + 2, pcd->float_data+pointsParsed * 4 + 3) >= 3) {
+				int rgb = (int) pcd->float_data[pointsParsed*4 + 3];
+				Color c;
+				c.r = (rgb >> 16) & 0xFF;
+				c.g = (rgb >> 8) & 0xFF;
+				c.b = (rgb) & 0xFF;
+				pcd->color_data[pointsParsed] = c;
 				pointsParsed++;
 			}
 		}
@@ -230,7 +241,7 @@ void colormap(float f, unsigned char *r,unsigned char *g,unsigned char *b) {
 }
 
 void render_text(const char *text, unsigned char *data) {
-	memset(data,0,labelWidth*labelHeight*3);
+//	memset(data,0,labelWidth*labelHeight*3);
 	const char *p;
 	unsigned char color[] = {255,255,255};
 	int x = 0;
@@ -242,7 +253,8 @@ void render_text(const char *text, unsigned char *data) {
 		for (int i=0;i<glyph->bitmap.rows;i++) {
 			unsigned char *dest = data + ((glyph->bitmap_top - i + fontpixels/2) * labelWidth + x + glyph->bitmap_left)* 3;
 			for (int j=0;j<glyph->bitmap.width;j++) {
-				memset(dest,*src,3); // draw in grayscale
+				if (*src > 0)
+					memset(dest,*src,3); // draw in grayscale
 				//*dest = *src; //draw in red
 				src++;
 				dest+=3;
@@ -264,7 +276,11 @@ void drawLine(int i,int j,int k) {
 
 void drawText(int i) {
 //	glRasterPos3f(box[i][12],box[i][13],box[i][14]);
-	glRasterPos3f((box[i][12] + box[i][15] + box[i][18] + box[i][21]) / 4, (box[i][13] + box[i][16] + box[i][19] + box[i][22]) / 4, box[i][14]);
+//	glRasterPos3f((box[i][12] + box[i][15] + box[i][18] + box[i][21]) / 4, (box[i][13] + box[i][16] + box[i][19] + box[i][22]) / 4, box[i][14]);
+	glRasterPos3f((box[i][12] + box[i][15] + box[i][18] + box[i][21]) / 4, (box[i][13] + box[i][16] + box[i][19] + box[i][22]) / 4, (box[i][2]+box[i][14])/2);
+	int pos[2];
+	glGetIntegerv(GL_CURRENT_RASTER_POSITION, pos);
+	glReadPixels(pos[0],pos[1],labelWidth,labelHeight,GL_RGB,GL_UNSIGNED_BYTE,raster);
 	render_text(descriptions[i],raster);
 	glDrawPixels(labelWidth,labelHeight,GL_RGB,GL_UNSIGNED_BYTE,raster);
 }
@@ -294,30 +310,40 @@ void draw() {
 		else
 			glColor3ub(rChoice[labels[i]],gChoice[labels[i]],bChoice[labels[i]]);
 		for (int n = 0; n < cloud[i]->numPoints; n++){
+//			glColor3ub(cloud[i]->color_data[n].r,cloud[i]->color_data[n].g,cloud[i]->color_data[n].b);
 			glVertex3d(cloud[i]->float_data[n*4],cloud[i]->float_data[n*4+1],cloud[i]->float_data[n*4+2]);
 		}
 	}
 	glEnd();
 
-	glLineWidth(1.0);
+	glLineWidth(2.0);
 	glColor3ub(255,255,255);
-	for (int i=0;i<box.size();i++) {
-		drawLine(i,0,1);
-		drawLine(i,0,2);
-		drawLine(i,1,3);
-		drawLine(i,2,3);
-		drawLine(i,0,4);
-		drawLine(i,1,5);
-		drawLine(i,2,6);
-		drawLine(i,3,7);
-		drawLine(i,4,5);
-		drawLine(i,4,6);
-		drawLine(i,5,7);
-		drawLine(i,6,7);
+	int j=0;
+//	for (int i=0;i<labels.size();i++) {
+//		if (labels[i] == 0)
+//			continue;
+//		glColor3ub(rChoice[labels[i]],gChoice[labels[i]],bChoice[labels[i]]);
+//		drawLine(j,0,1);
+//		drawLine(j,0,2);
+//		drawLine(j,1,3);
+//		drawLine(j,2,3);
+//		drawLine(j,0,4);
+//		drawLine(j,1,5);
+//		drawLine(j,2,6);
+//		drawLine(j,3,7);
+//		drawLine(j,4,5);
+//		drawLine(j,4,6);
+//		drawLine(j,5,7);
+//		drawLine(j,6,7);
+//		j++;
+//	}
+
 #if IGNORE_ZEROS
+	glDisable(GL_DEPTH_TEST);
+	for (int i=0;i<box.size();i++)
 		drawText(i);
+	glEnable(GL_DEPTH_TEST);
 #endif
-	}
 
 	glFlush();
 	SDL_GL_SwapBuffers();
@@ -468,6 +494,8 @@ int main(int argc,char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_WM_SetCaption("Point Cloud", NULL);
 	SDL_SetVideoMode(1800,1000, 32, SDL_OPENGL);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(70,(double)640/480,1,1000);

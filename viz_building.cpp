@@ -249,15 +249,14 @@ void draw() {
 	glLoadIdentity();
 	gluLookAt(cameraX,cameraY,cameraZ,centerX,centerY,centerZ,upX,upY,upZ);
 
-	glPointSize(1.0);
+	glPointSize(2.0);
 	glBegin(GL_POINTS);
-	for (int i=0;i<cloud.size();i++) {
-//		glColor3ub(255,0,0);
-		glColor3ub(50,50,50);
-		for (int n = 0; n < cloud[i]->numPoints; n++){
-			glVertex3d(cloud[i]->float_data[n*4],cloud[i]->float_data[n*4+1],cloud[i]->float_data[n*4+2]);
-		}
-	}
+//	for (int i=0;i<cloud.size();i++) {
+//		glColor3ub(50,50,50);
+//		for (int n = 0; n < cloud[i]->numPoints; n++){
+//			glVertex3d(cloud[i]->float_data[n*4],cloud[i]->float_data[n*4+1],cloud[i]->float_data[n*4+2]);
+//		}
+//	}
 	glColor3ub(50,50,50);
 	for (int n=0;n<building->numPoints;n++) {
 		int c = building->float_data[n*4+3];
@@ -269,7 +268,7 @@ void draw() {
 	}
 	glEnd();
 
-	glLineWidth(1.0);
+	glLineWidth(5.0);
 	glColor3ub(255,255,0);
 	for (int i=0;i<boxes.size();i++) {
 		drawBox(boxes[i].data());
@@ -330,7 +329,7 @@ int main(int argc,char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_WM_SetCaption("Point Cloud", NULL);
 	SDL_SetVideoMode(1800,1000, 32, SDL_OPENGL);
-    glEnable(GL_DEPTH_TEST);
+//    glEnable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT, GL_FILL);

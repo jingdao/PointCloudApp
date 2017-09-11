@@ -3,22 +3,24 @@
 train_dir=/home/jd/Documents/PointCloudApp/cloud/review/train
 test_home=/home/jd/Documents/PointCloudApp/cloud/review
 #test_mod="test_res1 test_res05 test_res01 test_res005 test_res001 test_noise1 test_noise05 test_noise01 test_noise005 test_noise001 test_heavy test_partial test_complete"
-test_mod="test"
+test_mod="report report_res1"
 
 script_dir=/home/jd/Documents/PointCloudApp/kitti
 svm_dir=/home/jd/Downloads/libsvm-3.20
 base_dir=/home/jd/Documents/PointCloudApp
 #DESC_LIST="spin fpfh shot usc esf vfh ../pad3d"
-DESC_LIST="spin fpfh shot usc"
-LOCAL_DESC="spin fpfh shot usc"
+DESC_LIST="../pad3d"
+#LOCAL_DESC="spin fpfh shot usc"
+LOCAL_DESC=""
 declare -A K_PARAM
 K_PARAM[spin]=8
 K_PARAM[fpfh]=8
 K_PARAM[shot]=11
 K_PARAM[usc]=4
-GLOBAL_DESC="esf vfh pad3d"
+#GLOBAL_DESC="esf vfh pad3d"
+GLOBAL_DESC="pad3d"
 computeTrainDescriptors=false
-computeTestDescriptors=false
+computeTestDescriptors=true
 
 if $computeTrainDescriptors
 then
@@ -58,17 +60,18 @@ do
 		done
 	done
 
-#	for DESC in $GLOBAL_DESC
-#	do
-#		$script_dir/writeLabels.py $train_dir $DESC 200 >/dev/null
+	for DESC in $GLOBAL_DESC
+	do
+		$script_dir/writeLabels.py $train_dir $DESC 200 >/dev/null
 #		$script_dir/writeLabels.py $test_dir $DESC 54 >/dev/null
-#		cp $train_dir/svmdata.txt $test_dir/svm_train_data.txt
-#		cp $test_dir/svmdata.txt $test_dir/svm_test_data.txt
-#		$svm_dir/svm-scale -l 0 -u 1 -s $test_dir/range.txt $test_dir/svm_train_data.txt > $test_dir/svm_train_scaled.txt 2>/dev/null
-#		$svm_dir/svm-scale -r $test_dir/range.txt $test_dir/svm_test_data.txt > $test_dir/svm_test_scaled.txt 2>/dev/null
-#		echo $DESC `$script_dir/svc.py $test_dir`
-#		cat $test_dir/svm_prediction.txt | tail -n +2 > $test_dir/prediction.txt
-#		$script_dir/countScore.py $test_dir
-#	done
+		$script_dir/writeLabels.py $test_dir $DESC 29 >/dev/null
+		cp $train_dir/svmdata.txt $test_dir/svm_train_data.txt
+		cp $test_dir/svmdata.txt $test_dir/svm_test_data.txt
+		$svm_dir/svm-scale -l 0 -u 1 -s $test_dir/range.txt $test_dir/svm_train_data.txt > $test_dir/svm_train_scaled.txt 2>/dev/null
+		$svm_dir/svm-scale -r $test_dir/range.txt $test_dir/svm_test_data.txt > $test_dir/svm_test_scaled.txt 2>/dev/null
+		echo $DESC `$script_dir/svc.py $test_dir`
+		cat $test_dir/svm_prediction.txt | tail -n +2 > $test_dir/prediction.txt
+		$script_dir/countScore.py $test_dir
+	done
 done
 

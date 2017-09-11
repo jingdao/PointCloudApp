@@ -128,25 +128,25 @@ void draw() {
 	if (gridDimensions.height > maxDimension)
 		maxDimension = gridDimensions.height;
 	maxDimension /= 2;
-	glBegin(GL_QUADS);
-	glColor3ub(100,100,100);
-	glVertex3d(-maxDimension,-maxDimension,0);
-	glVertex3d(maxDimension,-maxDimension,0);
-	glVertex3d(maxDimension,maxDimension,0);
-	glVertex3d(-maxDimension,maxDimension,0);
-	glEnd();
-	glLineWidth(5.0);
-	glBegin(GL_LINES);
-	glColor3ub(150,150,150);
-	glVertex3d(-maxDimension,-maxDimension,0);
-	glVertex3d(maxDimension,-maxDimension,0);
-	glColor3ub(150,150,150);
-	glVertex3d(-maxDimension,-maxDimension,0);
-	glVertex3d(-maxDimension,maxDimension,0);
-	glColor3ub(150,150,150);
-	glVertex3d(-maxDimension,-maxDimension,0);
-	glVertex3d(-maxDimension,-maxDimension,2*maxDimension);
-	glEnd();
+//	glBegin(GL_QUADS);
+//	glColor3ub(100,100,100);
+//	glVertex3d(-maxDimension,-maxDimension,0);
+//	glVertex3d(maxDimension,-maxDimension,0);
+//	glVertex3d(maxDimension,maxDimension,0);
+//	glVertex3d(-maxDimension,maxDimension,0);
+//	glEnd();
+//	glLineWidth(5.0);
+//	glBegin(GL_LINES);
+//	glColor3ub(150,150,150);
+//	glVertex3d(-maxDimension,-maxDimension,0);
+//	glVertex3d(maxDimension,-maxDimension,0);
+//	glColor3ub(150,150,150);
+//	glVertex3d(-maxDimension,-maxDimension,0);
+//	glVertex3d(-maxDimension,maxDimension,0);
+//	glColor3ub(150,150,150);
+//	glVertex3d(-maxDimension,-maxDimension,0);
+//	glVertex3d(-maxDimension,-maxDimension,2*maxDimension);
+//	glEnd();
 
 	//draw object
 	unsigned char r,g,b;
@@ -168,7 +168,7 @@ void draw() {
 	}
 
 	void (*draw3d)(float,float,float);
-	if (maxDimension >= 15) {
+	if (maxDimension >= 100) {
 		draw3d = drawDot;
 		glPointSize(2.0);
 	} else {
@@ -187,7 +187,9 @@ void draw() {
 #else
 					colormap(gridValue[gridIndex],&r,&g,&b);
 #endif
-					glColor3ub(r,g,b);
+//					glColor3ub(r,g,b);
+					int c = 100.0 * (x-xl) / gridDimensions.length + 100.0 * (z-zl) / gridDimensions.height + 50.0;
+					glColor3ub(c,c,c);
 					draw3d(x,y,z);
 				}
 			}

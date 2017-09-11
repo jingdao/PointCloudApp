@@ -73,11 +73,11 @@ def PCD_getHash(points,resolution):
 	xd = 0.5 * (min(x) + max(x))
 	yd = 0.5 * (min(y) + max(y))
 	zd = 0.5 * (min(z) + max(z))
-	pointset = set()
+	pointset = {}
 	for i in range(len(x)):
 		p = (int((x[i]-xd)/resolution),int((y[i]-yd)/resolution),int((z[i]-zd)/resolution))
 		if not p in pointset:
-			pointset.add(p)
+			pointset[p] = points[i]
 	return pointset,(xd,yd,zd)
 
 def PCD_xycluster(phash,box,points,resolution):
@@ -110,8 +110,8 @@ def PCD_xycluster(phash,box,points,resolution):
 	return clusters
 
 def getLines(points):
-	minX,minY,minZ = numpy.min(points,0)
-	maxX,maxY,maxZ = numpy.max(points,0)
+	minX,minY,minZ = numpy.min(points[:,:3],0)
+	maxX,maxY,maxZ = numpy.max(points[:,:3],0)
 	grid = 150
 	threshold = 0.5
 	dx = (maxX - minX) / grid
@@ -172,7 +172,11 @@ def loadPCD(filename):
 		x = float(ll[0])
 		y = float(ll[1])
 		z = float(ll[2])
-		points.append([x,y,z])
+		if len(ll)>3:
+			rgb = int(ll[3])
+			points.append([x,y,z,rgb])
+		else:
+			points.append([x,y,z])
 	pcd.close()
 	points = numpy.array(points)
 	return points
@@ -180,7 +184,22 @@ def loadPCD(filename):
 def savePCD(filename,points):
 	f = open(filename,"w")
 	l = len(points)
-	header = """# .PCD v0.7 - Point Cloud Data file format
+	useColor = len(points[0]) > 3
+	if useColor:
+		header = """# .PCD v0.7 - Point Cloud Data file format
+VERSION 0.7
+FIELDS x y z rgb
+SIZE 4 4 4 4 
+TYPE F F F I
+COUNT 1 1 1 1
+WIDTH %d
+HEIGHT 1
+VIEWPOINT 0 0 0 1 0 0 0
+POINTS %d
+DATA ascii
+""" % (l,l)
+	else:
+		header = """# .PCD v0.7 - Point Cloud Data file format
 VERSION 0.7
 FIELDS x y z
 SIZE 4 4 4
@@ -193,8 +212,12 @@ POINTS %d
 DATA ascii
 """ % (l,l)
 	f.write(header)
-	for p in points:
-		f.write("%f %f %f\n"%(p[0],p[1],p[2]))
+	if useColor:
+		for p in points:
+			f.write("%f %f %f %d\n"%(p[0],p[1],p[2],p[3]))
+	else:
+		for p in points:
+			f.write("%f %f %f\n"%(p[0],p[1],p[2]))
 	f.close()
 	print 'Saved %d points to %s' % (l,filename)
 
@@ -251,8 +274,8 @@ elif 'storey' in sys.argv[1]:
 	print 'Found %d columns' % b
 else:
 	points = loadPCD(sys.argv[1])
-	minX,minY,minZ = numpy.min(points,0)
-	maxX,maxY,maxZ = numpy.max(points,0)
+	minX,minY,minZ = numpy.min(points[:,:3],0)
+	maxX,maxY,maxZ = numpy.max(points[:,:3],0)
 	print 'Loaded %s (%f,%f,%f,%f,%f,%f)' % (sys.argv[1],minX,minY,minZ,maxX,maxY,maxZ)
 	horiz_grid = 100
 	vert_grid = 100
@@ -283,10 +306,12 @@ else:
 		idz = int((p[2]-minZ) / dz)
 		for l in range(len(peaks)):
 			if idz >= peaks[l][0] and idz <= peaks[l][-1]:
-				levels[l].append((p[0],p[1],p[2]))
+#				levels[l].append((p[0],p[1],p[2]))
+				levels[l].append(p)
 				break
 			elif l < len(peaks)-1 and idz < peaks[l+1][0] and idz > peaks[l][-1]:
-				storeys[l].append((p[0],p[1],p[2]))
+#				storeys[l].append((p[0],p[1],p[2]))
+				storeys[l].append(p)
 				break
 	for l in range(len(levels)):
 		savePCD("%s/level%d.pcd"%(sys.argv[2],l),levels[l])
